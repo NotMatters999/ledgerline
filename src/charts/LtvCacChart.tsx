@@ -1,0 +1,78 @@
+import React, { useMemo } from 'react';
+import { CoreChart } from './CoreChart';
+import { LtvMovement, CacMovement } from '../lib/ipc/engines';
+
+interface LtvCacChartProps {
+    ltvData: LtvMovement[];
+    cacData: CacMovement[];
+}
+
+export const LtvCacChart: React.FC<LtvCacChartProps> = ({ ltvData, cacData }) => {
+    const option = useMemo(() => {
+        // Assume both arrays share the same timeline months
+        const months = ltvData.map(d => d.month.substring(0, 7));
+        const ltv = ltvData.map(d => d.ltv);
+        
+        // Match CAC data to LTV months
+        const cac = months.map(m => {
+            const match = cacData.find(c => c.month.startsWith(m));
+            return match ? match.cac : 0;
+        });
+
+        return {
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'axis'
+            },
+            legend: {
+                data: ['LTV', 'CAC'],
+                textStyle: { color: '#9CA3AF' },
+                bottom: 0
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: months,
+                axisLabel: { color: '#9CA3AF' }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: '#9CA3AF', formatter: '${value}' },
+                splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }
+            },
+            series: [
+                {
+                    name: 'LTV',
+                    type: 'line',
+                    smooth: true,
+                    lineStyle: { width: 3, color: '#34D399' }, // Emerald 400
+                    itemStyle: { color: '#34D399' },
+                    data: ltv
+                },
+                {
+                    name: 'CAC',
+                    type: 'line',
+                    smooth: true,
+                    lineStyle: { width: 3, color: '#F43F5E' }, // Rose 500
+                    itemStyle: { color: '#F43F5E' },
+                    data: cac
+                }
+            ]
+        };
+    }, [ltvData, cacData]);
+
+    return (
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl w-full h-[400px]">
+            <h3 className="text-gray-300 font-medium mb-4">LTV vs CAC Trend</h3>
+            <div className="w-full h-[320px]">
+                <CoreChart option={option} />
+            </div>
+        </div>
+    );
+};

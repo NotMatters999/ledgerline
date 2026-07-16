@@ -1,0 +1,5 @@
+[target.x86_64-pc-windows-gnu]
+rustflags = ["-L", "native=duckdb_lib"]
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-L", "native=duckdb_lib"]
