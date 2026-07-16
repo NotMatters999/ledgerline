@@ -49,21 +49,3 @@ pub fn workspace_delete_confirm(token: String, state: State<'_, AppState>) -> Re
     let mgr = state.workspace_manager.lock().unwrap();
     mgr.confirm_delete(&token).map_err(LedgerlineError::from)
 }
-
-#[tauri::command]
-pub fn workspace_backup(id: String, state: State<'_, AppState>) -> Result<PathBuf, LedgerlineError> {
-    let mgr = state.workspace_manager.lock().unwrap();
-    let workspaces = mgr.list_workspaces().map_err(LedgerlineError::from)?;
-    let ws = workspaces.iter().find(|w| w.id == id).ok_or_else(|| LedgerlineError::from(WorkspaceError::NotFound(id.clone())))?;
-    
-    state.backup_manager.backup(&ws.db_path, &ws.name).map_err(LedgerlineError::from)
-}
-
-#[tauri::command]
-pub fn workspace_restore(id: String, backup_path: PathBuf, state: State<'_, AppState>) -> Result<(), LedgerlineError> {
-    let mgr = state.workspace_manager.lock().unwrap();
-    let workspaces = mgr.list_workspaces().map_err(LedgerlineError::from)?;
-    let ws = workspaces.iter().find(|w| w.id == id).ok_or_else(|| LedgerlineError::from(WorkspaceError::NotFound(id.clone())))?;
-    
-    state.backup_manager.restore(&backup_path, &ws.db_path).map_err(LedgerlineError::from)
-}

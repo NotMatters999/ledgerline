@@ -31,11 +31,3 @@ export async function requestDeleteWorkspace(id: string): Promise<string> {
 export async function confirmDeleteWorkspace(token: string): Promise<void> {
     return await invoke<void>('workspace_delete_confirm', { token });
 }
-
-export async function backupWorkspace(id: string): Promise<string> {
-    return await invoke<string>('workspace_backup', { id });
-}
-
-export async function restoreWorkspace(id: string, backupPath: string): Promise<void> {
-    return await invoke<void>('workspace_restore', { id, backupPath });
-}

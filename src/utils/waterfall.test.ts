@@ -1,9 +1,8 @@
 import { computeWaterfall } from './waterfall';
 import { MrrMovement } from '../lib/ipc/engines';
+import { test } from 'vitest';
 
-function runTests() {
-    console.log("Running waterfall tests...");
-
+test('waterfall logic', () => {
     // Mock movement based on Phase 5 dataset (e.g. Month 2: Mar 2024)
     // Jan: A(100), B(50) -> End 150
     // Feb: A(150), B(50), C(200) -> End 400 (Beg: 150, Exp: 50, New: 200)
@@ -76,13 +75,4 @@ function runTests() {
     if (computedEnding !== payload.value[6]) {
         throw new Error(`Reconciliation failed: computed ${computedEnding}, ending value ${payload.value[6]}`);
     }
-
-    console.log("All waterfall tests passed successfully!");
-}
-
-// Simple runner for ts-node / tsx if executed directly
-if (typeof require !== 'undefined' && require.main === module) {
-    runTests();
-}
-
-export { runTests };
+});

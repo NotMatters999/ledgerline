@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Dashboard } from "./features/dashboard/Dashboard";
 import { CohortView } from "./features/cohorts/CohortView";
 import { RetentionView } from "./features/retention/RetentionView";

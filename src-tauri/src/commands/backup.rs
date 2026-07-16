@@ -62,9 +62,8 @@ pub fn backup_restore_confirm(_workspace_id: String, filename: String, token: St
         }
     }
     
-    let mut mgr = state.workspace_manager.lock().unwrap();
-    // Force close active connections before overwrite
-    let _ = mgr.close_connection();
+    let mgr = state.workspace_manager.lock().unwrap();
+    // Connections are opened ephemerally by handlers, no need to explicitly close here.
     
     let workspaces = mgr.list_workspaces().map_err(LedgerlineError::from)?;
     let ws = workspaces.iter().find(|w| w.id == _workspace_id).ok_or("Workspace not found")?;

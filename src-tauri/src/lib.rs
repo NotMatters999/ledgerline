@@ -59,8 +59,6 @@ pub fn run() {
             workspace_switch,
             workspace_delete_request,
             workspace_delete_confirm,
-            workspace_backup,
-            workspace_restore,
             import_preview,
             import_commit,
             mrr_get,

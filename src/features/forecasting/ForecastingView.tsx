@@ -11,7 +11,6 @@ export const ForecastingView: React.FC = () => {
 
     const [forecastData, setForecastData] = useState<ForecastMovement[]>([]);
     const [error, setError] = useState<string | null>(null);
-    const [isCalculating, setIsCalculating] = useState<boolean>(true);
     
     const [avgLatency, setAvgLatency] = useState<number>(0);
     const latencyLog = useRef<number[]>([]);
@@ -19,7 +18,6 @@ export const ForecastingView: React.FC = () => {
     const debounceRef = useRef<number | null>(null);
 
     const fetchForecast = async (churn: number, exp: number, newM: number) => {
-        setIsCalculating(true);
         const startTime = performance.now();
         
         try {
@@ -45,8 +43,6 @@ export const ForecastingView: React.FC = () => {
             setError(null);
         } catch (err: any) {
             setError(err.toString());
-        } finally {
-            setIsCalculating(false);
         }
     };
 

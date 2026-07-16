@@ -8,6 +8,14 @@ use csv::WriterBuilder;
 use std::io::Cursor;
 use crate::utils::error::LedgerlineError;
 use crate::utils::logger::log_info;
+use duckdb::Connection;
+
+fn get_workspace_conn(workspace_id: &str, state: &State<'_, AppState>) -> Result<Connection, String> {
+    let mgr = state.workspace_manager.lock().unwrap();
+    let workspaces = mgr.list_workspaces().map_err(|e| e.to_string())?;
+    let ws = workspaces.iter().find(|w| w.id == workspace_id).ok_or("Workspace not found")?;
+    crate::db::connection::open_connection(&ws.db_path).map_err(|e| e.to_string())
+}
 
 #[derive(Serialize)]
 pub struct CsvExportResult {
@@ -19,8 +27,7 @@ pub struct CsvExportResult {
 #[tauri::command]
 pub fn export_csv(_workspace_id: String, state: State<'_, AppState>) -> Result<CsvExportResult, LedgerlineError> {
     log_info("Export", "Starting CSV export generation");
-    let mut manager = state.manager.lock().unwrap();
-    let conn = manager.get_connection().map_err(|e| e.to_string())?;
+    let conn = get_workspace_conn(&_workspace_id, &state).map_err(|e| LedgerlineError::from(e))?;
 
     let mrr_data = calculate_mrr(&conn).map_err(|e| e.to_string())?;
     let ret_data = calculate_retention(&conn).map_err(|e| e.to_string())?;
@@ -67,9 +74,7 @@ pub fn export_pdf(_workspace_id: String, state: State<'_, AppState>) -> Result<V
     let font_family = match genpdf::fonts::from_files("assets/fonts", "LiberationSans", None) {
         Ok(f) => f,
         Err(_) => {
-            // As a fallback to prevent strict crashing when running in an environment without assets:
-            // We just return a mock byte array. A real implementation would bundle the font.
-            return Ok(b"MOCK_PDF_HEADER: No font found, PDF rendering skipped in this test build.".to_vec());
+            return Err(LedgerlineError::from("PDF generation requires LiberationSans font which is currently missing from assets/fonts."));
         }
     };
 
@@ -81,8 +86,7 @@ pub fn export_pdf(_workspace_id: String, state: State<'_, AppState>) -> Result<V
     doc.push(Paragraph::new("LedgerLine Executive Summary").aligned(genpdf::Alignment::Center));
     doc.push(Paragraph::new("This is a structural PDF report containing KPIs, retention tables, and forecast data."));
 
-    let mut manager = state.manager.lock().unwrap();
-    if let Ok(conn) = manager.get_connection() {
+    if let Ok(conn) = get_workspace_conn(&_workspace_id, &state) {
         if let Ok(mrr) = calculate_mrr(&conn) {
             if let Some(last) = mrr.last() {
                 doc.push(Paragraph::new(format!("Ending MRR for latest month: ${}", last.ending)));

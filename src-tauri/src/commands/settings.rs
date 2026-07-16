@@ -1,6 +1,14 @@
 use tauri::State;
 use crate::commands::workspace::AppState;
 use chrono::NaiveDate;
+use duckdb::Connection;
+
+fn get_workspace_conn(workspace_id: &str, state: &State<'_, AppState>) -> Result<Connection, String> {
+    let mgr = state.workspace_manager.lock().unwrap();
+    let workspaces = mgr.list_workspaces().map_err(|e| e.to_string())?;
+    let ws = workspaces.iter().find(|w| w.id == workspace_id).ok_or("Workspace not found")?;
+    crate::db::connection::open_connection(&ws.db_path).map_err(|e| e.to_string())
+}
 
 #[tauri::command]
 pub fn setting_set(_workspace_id: String, key: String, value: String, state: State<'_, AppState>) -> Result<(), String> {
@@ -15,8 +23,7 @@ pub fn setting_set(_workspace_id: String, key: String, value: String, state: Sta
         }
     }
 
-    let mut manager = state.manager.lock().unwrap();
-    let conn = manager.get_connection().map_err(|e| e.to_string())?;
+    let conn = get_workspace_conn(&_workspace_id, &state)?;
     
     // Upsert logic for DuckDB (using DELETE then INSERT since DuckDB doesn't have a direct UPSERT for basic tables without constraints in some versions, or we can use INSERT OR REPLACE if PK is set. But no PK is guaranteed in the schema for `settings`.)
     conn.execute("DELETE FROM settings WHERE key = ?", [&key]).map_err(|e| e.to_string())?;
@@ -27,8 +34,7 @@ pub fn setting_set(_workspace_id: String, key: String, value: String, state: Sta
 
 #[tauri::command]
 pub fn setting_get(_workspace_id: String, key: String, state: State<'_, AppState>) -> Result<String, String> {
-    let mut manager = state.manager.lock().unwrap();
-    let conn = manager.get_connection().map_err(|e| e.to_string())?;
+    let conn = get_workspace_conn(&_workspace_id, &state)?;
     
     let mut stmt = conn.prepare("SELECT value FROM settings WHERE key = ? LIMIT 1").map_err(|e| e.to_string())?;
     let mut rows = stmt.query([&key]).map_err(|e| e.to_string())?;
@@ -58,8 +64,7 @@ pub fn marketing_spend_add(_workspace_id: String, period: String, amount: f64, c
         return Err("Period must be a valid date in YYYY-MM-DD format".into());
     }
 
-    let mut manager = state.manager.lock().unwrap();
-    let conn = manager.get_connection().map_err(|e| e.to_string())?;
+    let conn = get_workspace_conn(&_workspace_id, &state)?;
     
     // We could either append or upsert. Let's append, as marketing_spend can have multiple channels per period.
     conn.execute(

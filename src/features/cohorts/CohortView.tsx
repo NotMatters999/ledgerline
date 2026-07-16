@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useCohortStore } from '../../store/cohort';
 import { CoreChart } from '../../charts/CoreChart';
-import { CohortRow } from '../../lib/ipc/engines';
 
 type MetricType = 'revenue' | 'customers';
 type ValueType = 'percentage' | 'absolute';
@@ -22,22 +21,22 @@ export const CohortView: React.FC = () => {
         const trailingRows = data.rows.slice(-12);
         
         // Y-axis categories (Join months)
-        const yCategories = trailingRows.map(r => r.join_month.substring(0, 7)).reverse();
+        const yCategories = trailingRows.map((r: any) => r.join_month.substring(0, 7)).reverse();
         
         // X-axis categories (Months since join, max 12)
-        const maxMonths = Math.min(12, Math.max(...trailingRows.map(r => r.data.length - 1)));
+        const maxMonths = Math.min(12, Math.max(...trailingRows.map((r: any) => r.data.length - 1)));
         const xCategories = Array.from({ length: maxMonths + 1 }, (_, i) => `Month ${i}`);
 
         // Format data into [x, y, value]
         const heatmapData: any[] = [];
         let maxValue = 0;
 
-        trailingRows.reverse().forEach((row, yIndex) => {
+        trailingRows.reverse().forEach((row: any, yIndex: number) => {
             const initialRev = row.new_revenue;
             const initialCust = row.new_customers;
 
             for (let xIndex = 0; xIndex <= maxMonths; xIndex++) {
-                const cell = row.data.find(d => d.month_index === xIndex);
+                const cell = row.data.find((d: any) => d.month_index === xIndex);
                 if (!cell) continue;
 
                 let val = 0;

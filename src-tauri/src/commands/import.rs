@@ -2,7 +2,7 @@ use tauri::State;
 use std::path::PathBuf;
 use crate::commands::workspace::AppState;
 use crate::import::pipeline::{preview, commit, PreviewResult, ImportError};
-use crate::db::connection::open_db;
+use crate::db::connection::open_connection;
 use crate::utils::error::LedgerlineError;
 use crate::utils::logger::log_info;
 
@@ -34,7 +34,7 @@ pub fn import_commit(workspace_id: String, file_path: String, state: State<'_, A
     }
 
     let mgr = state.workspace_manager.lock().unwrap();
-    let mut conn = open_db(&db_path).map_err(LedgerlineError::from)?;
+    let mut conn = open_connection(&db_path).map_err(LedgerlineError::from)?;
     commit(&mut conn, PathBuf::from(file_path).as_path()).map_err(LedgerlineError::from)?;
     
     log_info("Import", "Import commit completed successfully");
