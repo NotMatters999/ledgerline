@@ -40,6 +40,7 @@ impl serde::Serialize for WorkspaceError {
 }
 
 pub struct WorkspaceManager {
+    #[allow(dead_code)]
     app_data_dir: PathBuf,
     workspaces_json_path: PathBuf,
     workspaces_dir: PathBuf,

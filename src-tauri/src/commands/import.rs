@@ -15,16 +15,12 @@ pub fn import_preview(workspace_id: String, file_path: String, _state: State<'_,
 #[tauri::command]
 pub fn import_commit(workspace_id: String, file_path: String, state: State<'_, AppState>) -> Result<(), LedgerlineError> {
     log_info("Import", &format!("Starting import commit for file: {}", file_path));
-    let mut ws_name = String::new();
-    let mut db_path = PathBuf::new();
-    
-    {
+    let (ws_name, db_path) = {
         let mgr = state.workspace_manager.lock().unwrap();
         let workspaces = mgr.list_workspaces().map_err(|_| ImportError::Database(duckdb::Error::QueryReturnedNoRows))?;
         let ws = workspaces.iter().find(|w| w.id == workspace_id).ok_or_else(|| ImportError::Database(duckdb::Error::QueryReturnedNoRows))?;
-        ws_name = ws.name.clone();
-        db_path = ws.db_path.clone();
-    }
+        (ws.name.clone(), ws.db_path.clone())
+    };
     
     // Automated Snapshot: Protect the ledger before massive mutation
     // This synchronously copies the .duckdb file (usually <100MB, taking ~5-50ms on modern SSDs).

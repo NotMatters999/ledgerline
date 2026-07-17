@@ -1,6 +1,5 @@
 use tauri::State;
-use std::path::PathBuf;
-use crate::workspace::manager::{WorkspaceManager, Workspace, WorkspaceError};
+use crate::workspace::manager::{WorkspaceManager, Workspace};
 use crate::workspace::backup::BackupManager;
 use crate::utils::error::LedgerlineError;
 use crate::utils::logger::log_info;

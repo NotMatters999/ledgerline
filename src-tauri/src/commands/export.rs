@@ -66,7 +66,7 @@ pub fn export_csv(_workspace_id: String, state: State<'_, AppState>) -> Result<C
 #[tauri::command]
 pub fn export_pdf(_workspace_id: String, state: State<'_, AppState>) -> Result<Vec<u8>, LedgerlineError> {
     log_info("Export", "Starting PDF export generation");
-    use genpdf::elements::{Paragraph, Text};
+    use genpdf::elements::Paragraph;
     use genpdf::{Document, SimplePageDecorator};
     
     // We only create a structural PDF. We require a font family to be loaded.

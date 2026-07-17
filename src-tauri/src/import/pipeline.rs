@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::import::parser::{parse_file, ParserError};
 use crate::import::alias_map::{detect_columns, MappedColumns};
-use crate::import::normalize::{detect_date_format, clean_currency, DateFormat, NormalizeError};
+use crate::import::normalize::{detect_date_format, clean_currency, NormalizeError};
 use crate::import::fingerprint::{file_hash, dataset_fingerprint};
 use crate::validation::{validate_row, ValidationError};
 
