@@ -59,6 +59,8 @@ fn parse_excel(path: &Path) -> Result<ParsedFile, ParserError> {
             Data::Int(i) => i.to_string(),
             Data::Bool(b) => b.to_string(),
             Data::DateTime(d) => d.to_string(),
+            Data::DateTimeIso(d) => d.to_string(),
+            Data::DurationIso(d) => d.to_string(),
             Data::Error(e) => e.to_string(),
         }).collect::<Vec<_>>(),
         None => return Err(ParserError::EmptyWorksheet),
@@ -73,6 +75,8 @@ fn parse_excel(path: &Path) -> Result<ParsedFile, ParserError> {
             Data::Int(i) => i.to_string(),
             Data::Bool(b) => b.to_string(),
             Data::DateTime(d) => d.to_string(),
+            Data::DateTimeIso(d) => d.to_string(),
+            Data::DurationIso(d) => d.to_string(),
             Data::Error(e) => e.to_string(),
         }).collect();
         rows.push(row_vec);
