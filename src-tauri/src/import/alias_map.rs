@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColumnType {
     CustomerId,
@@ -5,7 +7,7 @@ pub enum ColumnType {
     Date,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct MappedColumns {
     pub customer_id_idx: Option<usize>,
     pub revenue_idx: Option<usize>,

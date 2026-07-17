@@ -10,7 +10,7 @@ pub enum NormalizeError {
     InvalidAmount(String),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DateFormat {
     YyyyMmDd,      // YYYY-MM-DD
     DdMmYyyySlash, // DD/MM/YYYY

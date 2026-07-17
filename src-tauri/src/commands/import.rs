@@ -30,7 +30,7 @@ pub fn import_commit(workspace_id: String, file_path: String, state: State<'_, A
     // This synchronously copies the .duckdb file (usually <100MB, taking ~5-50ms on modern SSDs).
     if let Err(e) = state.backup_manager.backup(&db_path, &ws_name) {
         // If backup fails, we abort the import to prevent unsafe mutation without a rollback net
-        return Err(LedgerlineError::from(ImportError::Io(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to create safety snapshot: {}", e)))));
+        return Err(LedgerlineError::from(ImportError::Parser(crate::import::parser::ParserError::Io(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to create safety snapshot: {}", e))))));
     }
 
     let mgr = state.workspace_manager.lock().unwrap();

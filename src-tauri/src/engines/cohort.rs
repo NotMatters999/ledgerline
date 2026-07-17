@@ -1,7 +1,7 @@
 use duckdb::Connection;
 use serde::Serialize;
 use std::collections::{HashMap, BTreeMap};
-use chrono::NaiveDate;
+use chrono::{NaiveDate, Datelike};
 
 #[derive(Debug, Serialize, Clone)]
 pub struct CohortCell {

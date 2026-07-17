@@ -8,7 +8,7 @@ pub struct LedgerlineError {
 }
 
 impl fmt::Display for LedgerlineError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Formatter<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.message)
     }
 }
