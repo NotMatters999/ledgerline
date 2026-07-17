@@ -40,8 +40,6 @@ impl serde::Serialize for WorkspaceError {
 }
 
 pub struct WorkspaceManager {
-    #[allow(dead_code)]
-    app_data_dir: PathBuf,
     workspaces_json_path: PathBuf,
     workspaces_dir: PathBuf,
     delete_tokens: Mutex<HashMap<String, String>>,
@@ -64,7 +62,6 @@ impl WorkspaceManager {
         }
 
         Ok(Self {
-            app_data_dir,
             workspaces_json_path,
             workspaces_dir,
             delete_tokens: Mutex::new(HashMap::new()),

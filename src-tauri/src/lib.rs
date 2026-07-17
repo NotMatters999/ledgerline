@@ -46,7 +46,7 @@ pub fn run() {
             utils::logger::log_info("System", &format!("Cold start time: {:?}", start_time.elapsed()));
             Ok(())
         })
-        .on_window_event(|_window, event| {
+        .on_window_event(|_, event| {
             if let tauri::WindowEvent::Destroyed = event {
                 utils::logger::log_info("System", "LedgerLine shutting down.");
             }
