@@ -72,17 +72,7 @@ fn parse_excel(path: &Path) -> Result<ParsedFile, ParserError> {
             Data::Float(f) => f.to_string(),
             Data::Int(i) => i.to_string(),
             Data::Bool(b) => b.to_string(),
-            Data::DateTime(_) => {
-                if let Some(s) = cell.as_datetime() {
-                    s.to_string()
-                } else if let Some(s) = cell.as_date() {
-                    s.to_string()
-                } else if let Some(s) = cell.as_time() {
-                    s.to_string()
-                } else {
-                    cell.to_string()
-                }
-            },
+            Data::DateTime(d) => d.to_string(),
             Data::Error(e) => e.to_string(),
         }).collect();
         rows.push(row_vec);
