@@ -1,5 +1,5 @@
 use std::path::Path;
-use calamine::{Reader, open_workbook_auto, Data};
+use calamine::{Reader, open_workbook_auto, Data, DataType};
 use csv::ReaderBuilder;
 
 #[derive(Debug, thiserror::Error)]
