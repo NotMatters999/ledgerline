@@ -25,7 +25,7 @@ serde_json = "=1.0.150"
 duckdb = "=1.10504.0"
 calamine = "=0.36.0"
 csv = "=1.4.0"
-chrono = "=0.4.45"
+chrono = { version = "=0.4.45", features = ["serde"] }
 uuid = { version = "=1.23.4", features = ["v4"] }
 thiserror = "=2.0.18"
 sha2 = "=0.10.9"

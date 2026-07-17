@@ -1,5 +1,5 @@
 use std::path::Path;
-use calamine::{Reader, open_workbook_auto, DataType};
+use calamine::{Reader, open_workbook_auto, Data};
 use csv::ReaderBuilder;
 
 #[derive(Debug, thiserror::Error)]
@@ -53,13 +53,13 @@ fn parse_excel(path: &Path) -> Result<ParsedFile, ParserError> {
     
     let headers = match iter.next() {
         Some(row) => row.iter().map(|cell| match cell {
-            DataType::Empty => String::new(),
-            DataType::String(s) => s.trim().to_string(),
-            DataType::Float(f) => f.to_string(),
-            DataType::Int(i) => i.to_string(),
-            DataType::Bool(b) => b.to_string(),
-            DataType::DateTime(d) => d.to_string(),
-            DataType::Error(e) => e.to_string(),
+            Data::Empty => String::new(),
+            Data::String(s) => s.trim().to_string(),
+            Data::Float(f) => f.to_string(),
+            Data::Int(i) => i.to_string(),
+            Data::Bool(b) => b.to_string(),
+            Data::DateTime(d) => d.to_string(),
+            Data::Error(e) => e.to_string(),
         }).collect::<Vec<_>>(),
         None => return Err(ParserError::EmptyWorksheet),
     };
@@ -67,12 +67,12 @@ fn parse_excel(path: &Path) -> Result<ParsedFile, ParserError> {
     let mut rows = Vec::new();
     for row in iter {
         let row_vec = row.iter().map(|cell| match cell {
-            DataType::Empty => String::new(),
-            DataType::String(s) => s.trim().to_string(),
-            DataType::Float(f) => f.to_string(),
-            DataType::Int(i) => i.to_string(),
-            DataType::Bool(b) => b.to_string(),
-            DataType::DateTime(_) => {
+            Data::Empty => String::new(),
+            Data::String(s) => s.trim().to_string(),
+            Data::Float(f) => f.to_string(),
+            Data::Int(i) => i.to_string(),
+            Data::Bool(b) => b.to_string(),
+            Data::DateTime(_) => {
                 if let Some(s) = cell.as_datetime() {
                     s.to_string()
                 } else if let Some(s) = cell.as_date() {
@@ -83,7 +83,7 @@ fn parse_excel(path: &Path) -> Result<ParsedFile, ParserError> {
                     cell.to_string()
                 }
             },
-            DataType::Error(e) => e.to_string(),
+            Data::Error(e) => e.to_string(),
         }).collect();
         rows.push(row_vec);
     }
