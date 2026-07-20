@@ -7,7 +7,13 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Debug/build artifacts — never commit these
+*.txt
+*_logs.txt
+failed_logs.txt
+
 node_modules
+node_modules/.vite
 dist
 dist-ssr
 *.local

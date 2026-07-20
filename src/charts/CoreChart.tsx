@@ -1,11 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import * as echarts from 'echarts/core';
-import { LineChart, BarChart } from 'echarts/charts';
+import { LineChart, BarChart, HeatmapChart } from 'echarts/charts';
 import {
     TitleComponent,
     TooltipComponent,
     GridComponent,
-    LegendComponent
+    LegendComponent,
+    VisualMapComponent,
+    MarkLineComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
@@ -14,9 +16,12 @@ echarts.use([
     TooltipComponent,
     GridComponent,
     LegendComponent,
+    VisualMapComponent,
+    MarkLineComponent,
     LineChart,
     BarChart,
-    CanvasRenderer
+    HeatmapChart,
+    CanvasRenderer,
 ]);
 
 interface CoreChartProps {

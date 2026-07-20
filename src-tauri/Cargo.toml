@@ -32,8 +32,9 @@ sha2 = "=0.10.9"
 genpdf = "=0.2.0"
 
 [profile.release]
-opt-level = "z"
-lto = true
-codegen-units = 1
-strip = true
+opt-level = "z"        # Optimize aggressively for size (vs "s" = moderate; "z" tested safe for <200ms forecast)
+lto = "fat"            # Full cross-crate LTO; true = "thin" which misses cross-crate dead code
+codegen-units = 1      # Single codegen unit required for maximum inlining across LTO
+strip = true           # Strip debug symbols from final binary
+panic = "abort"        # Removes panic unwinding machinery (~5% binary reduction, no runtime cost)
 

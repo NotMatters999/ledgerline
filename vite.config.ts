@@ -8,11 +8,37 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(async () => ({
   plugins: [react()],
 
-  // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
-  //
-  // 1. prevent Vite from obscuring rust errors
+  // 1. Prevent Vite from obscuring rust errors
   clearScreen: false,
-  // 2. tauri expects a fixed port, fail if that port is not available
+
+  build: {
+    // No sourcemaps in production bundle — reduces output size significantly
+    sourcemap: false,
+    // Raise warning threshold; our chunks are intentionally separated below
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        // Split the 770KB monolith into async chunks:
+        // - echarts is ~400KB on its own; lazy-load it separately
+        // - zustand + react-dom can share a vendor chunk
+        manualChunks: {
+          // React runtime — changes rarely, good for cache hits
+          "vendor-react": ["react", "react-dom"],
+          // ECharts core + charts — large but only needed for chart views
+          "vendor-echarts": [
+            "echarts/core",
+            "echarts/charts",
+            "echarts/components",
+            "echarts/renderers",
+          ],
+          // State management
+          "vendor-zustand": ["zustand"],
+        },
+      },
+    },
+  },
+
+  // 2. Tauri expects a fixed port, fail if that port is not available
   server: {
     port: 1420,
     strictPort: true,
@@ -25,7 +51,7 @@ export default defineConfig(async () => ({
         }
       : undefined,
     watch: {
-      // 3. tell Vite to ignore watching `src-tauri`
+      // 3. Tell Vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
     },
   },
