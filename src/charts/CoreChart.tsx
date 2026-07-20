@@ -29,26 +29,30 @@ export const CoreChart: React.FC<CoreChartProps> = ({ option, className, style }
     const chartRef = useRef<HTMLDivElement>(null);
     const instanceRef = useRef<echarts.ECharts | null>(null);
 
+    // Initialize the chart instance once and register the resize listener.
+    // This effect runs only once on mount and cleans up on unmount.
     useEffect(() => {
         if (!chartRef.current) return;
 
-        if (!instanceRef.current) {
-            instanceRef.current = echarts.init(chartRef.current, null, { renderer: 'canvas' });
-        }
-
-        instanceRef.current.setOption(option);
+        instanceRef.current = echarts.init(chartRef.current, null, { renderer: 'canvas' });
 
         const handleResize = () => {
             instanceRef.current?.resize();
         };
-
         window.addEventListener('resize', handleResize);
-        
+
         return () => {
             window.removeEventListener('resize', handleResize);
             instanceRef.current?.dispose();
             instanceRef.current = null;
         };
+    }, []); // empty deps — run once
+
+    // Update the chart option whenever it changes, without recreating the instance.
+    useEffect(() => {
+        if (instanceRef.current) {
+            instanceRef.current.setOption(option, { notMerge: false });
+        }
     }, [option]);
 
     return <div ref={chartRef} className={className} style={{ width: '100%', height: '100%', ...style }} />;

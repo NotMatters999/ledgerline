@@ -27,7 +27,7 @@ pub struct CsvExportResult {
 #[tauri::command]
 pub fn export_csv(_workspace_id: String, state: State<'_, AppState>) -> Result<CsvExportResult, LedgerlineError> {
     log_info("Export", "Starting CSV export generation");
-    let conn = get_workspace_conn(&_workspace_id, &state).map_err(|e| LedgerlineError::from(e))?;
+    let conn = get_workspace_conn(&_workspace_id, &state).map_err(LedgerlineError::from)?;
 
     let mrr_data = calculate_mrr(&conn).map_err(|e| e.to_string())?;
     let ret_data = calculate_retention(&conn).map_err(|e| e.to_string())?;

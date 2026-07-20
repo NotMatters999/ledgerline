@@ -41,7 +41,7 @@ pub fn validate_row(
         }
     })?;
 
-    let today = Utc::now().naive_utc().date();
+    let today = Utc::now().date_naive();
     if parsed_date > today {
         return Err(ValidationError {
             row_number,
@@ -59,7 +59,7 @@ mod tests {
 
     #[test]
     fn test_valid_row() {
-        let today_str = Utc::now().naive_utc().date().format("%Y-%m-%d").to_string();
+        let today_str = Utc::now().date_naive().format("%Y-%m-%d").to_string();
         assert!(validate_row(1, "cust_1", &today_str, 100.0).is_ok());
     }
 
@@ -71,7 +71,7 @@ mod tests {
 
     #[test]
     fn test_invalid_future_date() {
-        let future_date = (Utc::now().naive_utc().date() + Duration::days(1)).format("%Y-%m-%d").to_string();
+        let future_date = (Utc::now().date_naive() + Duration::days(1)).format("%Y-%m-%d").to_string();
         let err = validate_row(1, "cust_1", &future_date, 100.0).unwrap_err();
         assert_eq!(err.reason, "Future dates are not allowed");
     }

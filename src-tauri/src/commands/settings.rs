@@ -23,11 +23,13 @@ pub fn setting_set(_workspace_id: String, key: String, value: String, state: Sta
         }
     }
 
-    let conn = get_workspace_conn(&_workspace_id, &state)?;
+    let mut conn = get_workspace_conn(&_workspace_id, &state)?;
     
-    // Upsert logic for DuckDB (using DELETE then INSERT since DuckDB doesn't have a direct UPSERT for basic tables without constraints in some versions, or we can use INSERT OR REPLACE if PK is set. But no PK is guaranteed in the schema for `settings`.)
-    conn.execute("DELETE FROM settings WHERE key = ?", [&key]).map_err(|e| e.to_string())?;
-    conn.execute("INSERT INTO settings (key, value) VALUES (?, ?)", [&key, &value]).map_err(|e| e.to_string())?;
+    // Atomic upsert: use a transaction so there is no gap between DELETE and INSERT
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    tx.execute("DELETE FROM settings WHERE key = ?", [&key]).map_err(|e| e.to_string())?;
+    tx.execute("INSERT INTO settings (key, value) VALUES (?, ?)", [&key, &value]).map_err(|e| e.to_string())?;
+    tx.commit().map_err(|e| e.to_string())?;
     
     Ok(())
 }
@@ -69,7 +71,7 @@ pub fn marketing_spend_add(_workspace_id: String, period: String, amount: f64, c
     // We could either append or upsert. Let's append, as marketing_spend can have multiple channels per period.
     conn.execute(
         "INSERT INTO marketing_spend (period, amount, channel) VALUES (?, ?, ?)", 
-        [period, amount.to_string(), channel]
+        duckdb::params![period, amount, channel]
     ).map_err(|e| e.to_string())?;
     
     Ok(())

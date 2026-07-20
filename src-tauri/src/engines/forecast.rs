@@ -1,6 +1,6 @@
 use duckdb::Connection;
 use serde::{Deserialize, Serialize};
-use chrono::{Datelike, NaiveDate};
+use chrono::{Datelike, NaiveDate, Utc};
 use crate::engines::mrr::calculate_mrr;
 
 #[derive(Debug, Deserialize)]
@@ -24,7 +24,8 @@ pub fn calculate_forecast(conn: &Connection, params: &ForecastParams) -> Result<
     let mrr_data = calculate_mrr(conn)?;
     
     let mut baseline_mrr = 0.0;
-    let mut last_date = NaiveDate::from_ymd_opt(Utc::now().year(), Utc::now().month(), 1).unwrap();
+    let today = Utc::now().date_naive();
+    let mut last_date = NaiveDate::from_ymd_opt(today.year(), today.month(), 1).unwrap();
 
     if let Some(last_movement) = mrr_data.last() {
         baseline_mrr = last_movement.ending;
@@ -64,8 +65,6 @@ pub fn calculate_forecast(conn: &Connection, params: &ForecastParams) -> Result<
 
     Ok(forecast)
 }
-
-use chrono::Utc;
 
 #[cfg(test)]
 mod tests {

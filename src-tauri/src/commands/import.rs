@@ -29,7 +29,6 @@ pub fn import_commit(workspace_id: String, file_path: String, state: State<'_, A
         return Err(LedgerlineError::from(ImportError::Parser(crate::import::parser::ParserError::Io(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to create safety snapshot: {}", e))))));
     }
 
-    let mgr = state.workspace_manager.lock().unwrap();
     let mut conn = open_connection(&db_path).map_err(LedgerlineError::from)?;
     commit(&mut conn, PathBuf::from(file_path).as_path()).map_err(LedgerlineError::from)?;
     
@@ -51,7 +50,7 @@ mod tests {
     fn test_import_snapshot_performance_budget() {
         let dir = tempdir().unwrap();
         let app_dir = dir.path().to_path_buf();
-        let ws_mgr = WorkspaceManager::new(&app_dir);
+        let ws_mgr = WorkspaceManager::new(&app_dir).unwrap();
         let bk_mgr = BackupManager::new(&app_dir);
         
         ws_mgr.create_workspace("PerfTest").unwrap();

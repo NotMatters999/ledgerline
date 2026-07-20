@@ -30,7 +30,6 @@ uuid = { version = "=1.23.4", features = ["v4"] }
 thiserror = "=2.0.18"
 sha2 = "=0.10.9"
 genpdf = "=0.2.0"
-dirs = "=5.0.1"
 
 [profile.release]
 opt-level = "z"

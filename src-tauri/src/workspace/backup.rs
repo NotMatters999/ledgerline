@@ -4,7 +4,7 @@ use chrono::Utc;
 use super::manager::WorkspaceError;
 
 pub struct BackupManager {
-    app_data_dir: PathBuf,
+    pub app_data_dir: PathBuf,
 }
 
 impl BackupManager {

@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import * as echarts from 'echarts/core';
 import { CoreChart } from './CoreChart';
 import { RetentionMovement } from '../lib/ipc/engines';
 
@@ -54,10 +53,14 @@ export const RetentionChart: React.FC<RetentionChartProps> = ({ data }) => {
                     lineStyle: { width: 3, color: '#A78BFA' }, // Purple 400
                     itemStyle: { color: '#A78BFA' },
                     areaStyle: {
-                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                            { offset: 0, color: 'rgba(167, 139, 250, 0.5)' },
-                            { offset: 1, color: 'rgba(167, 139, 250, 0.0)' }
-                        ])
+                        color: {
+                            type: 'linear',
+                            x: 0, y: 0, x2: 0, y2: 1,
+                            colorStops: [
+                                { offset: 0, color: 'rgba(167, 139, 250, 0.5)' },
+                                { offset: 1, color: 'rgba(167, 139, 250, 0.0)' }
+                            ]
+                        }
                     },
                     data: nrr
                 },

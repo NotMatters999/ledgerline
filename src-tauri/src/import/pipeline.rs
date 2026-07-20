@@ -116,7 +116,6 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
         let date = format.parse(&date_str).ok_or_else(|| NormalizeError::InvalidDate(date_str.clone()))?;
         let amount = clean_currency(&amount_str)?;
         
-        let row_num = normalized_rows.len() + 1; // 1-indexed for the user report
         let date_iso = date.format("%Y-%m-%d").to_string();
         
         total_amount += amount;

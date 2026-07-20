@@ -67,10 +67,8 @@ pub fn backup_restore_confirm(_workspace_id: String, filename: String, token: St
     let workspaces = mgr.list_workspaces().map_err(LedgerlineError::from)?;
     let ws = workspaces.iter().find(|w| w.id == _workspace_id).ok_or("Workspace not found")?;
     
-    // Compute absolute path of the backup file
-    // app_data_dir/backups/workspace_name/filename
-    let app_dir = dirs::data_dir().unwrap_or_default().join("ledgerline");
-    let backup_path = app_dir.join("backups").join(&ws.name).join(&filename);
+    // Compute absolute path of the backup file using the backup manager's known app data dir
+    let backup_path = state.backup_manager.app_data_dir.join("backups").join(&ws.name).join(&filename);
     
     if !backup_path.exists() {
         return Err(LedgerlineError::from("Backup file does not exist"));
@@ -96,7 +94,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let app_dir = dir.path().to_path_buf();
         
-        let ws_mgr = WorkspaceManager::new(&app_dir);
+        let ws_mgr = WorkspaceManager::new(&app_dir).unwrap();
         let bk_mgr = BackupManager::new(&app_dir);
         
         ws_mgr.create_workspace("TestWS").unwrap();

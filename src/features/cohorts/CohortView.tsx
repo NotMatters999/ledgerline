@@ -20,7 +20,7 @@ export const CohortView: React.FC = () => {
         // Take up to the last 12 cohorts for the trailing 12 months view
         const trailingRows = data.rows.slice(-12);
         
-        // Y-axis categories (Join months)
+        // Y-axis categories (Join months) — reversed so newest cohort is at the top
         const yCategories = trailingRows.map((r: any) => r.join_month.substring(0, 7)).reverse();
         
         // X-axis categories (Months since join, max 12)
@@ -31,7 +31,9 @@ export const CohortView: React.FC = () => {
         const heatmapData: any[] = [];
         let maxValue = 0;
 
-        trailingRows.reverse().forEach((row: any, yIndex: number) => {
+        // Iterate in reverse order (newest first) so yIndex 0 = newest cohort = yCategories[0]
+        const reversedRows = [...trailingRows].reverse();
+        reversedRows.forEach((row: any, yIndex: number) => {
             const initialRev = row.new_revenue;
             const initialCust = row.new_customers;
 
