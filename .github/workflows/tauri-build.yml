@@ -42,11 +42,20 @@ jobs:
 
       - name: Build Tauri App
         run: pnpm run tauri build
-        
-      - name: Upload Artifacts
+
+      # Bundled installers: MSI (Windows Installer) + NSIS (lightweight setup exe)
+      - name: Upload Installers
         uses: actions/upload-artifact@v4
         with:
-          name: ledgerline-windows-executable
+          name: ledgerline-windows-installers
           path: |
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/nsis/*.exe
+
+      # Portable build: raw unsigned exe — no installation required, run directly.
+      # Tauri v2 has no dedicated 'portable' bundle target; this IS the portable build.
+      - name: Upload Portable Exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: ledgerline-windows-portable
+          path: src-tauri/target/release/ledgerline.exe
