@@ -33,6 +33,20 @@
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "skip"
+      }
+    },
+    "nsis": {
+      "displayLanguageSelector": false,
+      "languages": ["English"],
+      "installMode": "currentUser",
+      "shortcutName": "LedgerLine"
+    },
+    "msi": {
+      "enableElevatedUpdateTask": false
+    }
   }
 }
