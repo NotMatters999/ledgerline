@@ -56,7 +56,7 @@ export const UnitEconomicsView: React.FC = () => {
         try {
             const amount = parseFloat(spendAmountInput);
             if (isNaN(amount) || amount < 0) {
-                throw new Error("Marketing spend must be a positive number");
+                throw new Error("Marketing spend must be a non-negative number (0 or greater)");
             }
             if (!spendPeriodInput) {
                 throw new Error("Please select a month");
@@ -74,18 +74,18 @@ export const UnitEconomicsView: React.FC = () => {
 
     if (isLoading && ltv.length === 0) {
         return (
-            <div className="flex h-full items-center justify-center">
-                <div className="animate-spin h-8 w-8 border-4 border-emerald-500 border-t-transparent rounded-full"></div>
+            <div className="flex-center" style={{ height: '100%', color: 'var(--text-primary)' }}>
+                <div className="spinner"></div>
             </div>
         );
     }
 
     if (error && ltv.length === 0) {
         return (
-            <div className="flex h-full items-center justify-center text-rose-400">
-                <div className="bg-rose-500/10 p-6 rounded-2xl border border-rose-500/20">
-                    <h2 className="text-xl font-bold mb-2">Error Loading Unit Economics</h2>
-                    <p>{error}</p>
+            <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
+                <div className="glass-panel p-6" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
+                    <h2 className="page-title" style={{ fontSize: '1.25rem', color: 'var(--status-danger)' }}>Error Loading Unit Economics</h2>
+                    <p className="text-muted" style={{ marginTop: '0.5rem' }}>{error}</p>
                 </div>
             </div>
         );
@@ -100,19 +100,19 @@ export const UnitEconomicsView: React.FC = () => {
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
 
     return (
-        <div className="w-full flex flex-col gap-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <header className="mb-2">
-                <h2 className="text-2xl font-bold tracking-tight text-white">Unit Economics</h2>
-                <p className="text-gray-400 mt-1">LTV, CAC, and Payback Period Analysis.</p>
+                <h2 className="page-title">Unit Economics</h2>
+                <p className="page-subtitle">LTV, CAC, and Payback Period Analysis.</p>
             </header>
 
             {actionError && (
-                <div className="bg-rose-500/10 text-rose-400 p-4 rounded-xl border border-rose-500/20">
+                <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--status-danger)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                     {actionError}
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid-cards">
                 <MetricCard 
                     title="Customer LTV" 
                     value={formatCurrency(currentLtv)} 
@@ -135,16 +135,16 @@ export const UnitEconomicsView: React.FC = () => {
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                <div style={{ flex: '2 1 600px' }}>
                     <LtvCacChart ltvData={ltv} cacData={cac} />
                 </div>
                 
-                <div className="flex flex-col gap-6">
-                    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
-                        <h3 className="text-gray-300 font-medium mb-4">Gross Margin</h3>
-                        <form onSubmit={handleMarginSubmit} className="flex flex-col gap-3">
-                            <label className="text-sm text-gray-400">Global Margin % (0-100)</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: '1 1 300px' }}>
+                    <div className="glass-panel p-6">
+                        <h3 className="card-title" style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>Gross Margin</h3>
+                        <form onSubmit={handleMarginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <label className="text-muted" style={{ fontSize: '0.875rem' }}>Global Margin % (0-100)</label>
                             <input 
                                 type="number" 
                                 step="0.1"
@@ -152,26 +152,26 @@ export const UnitEconomicsView: React.FC = () => {
                                 max="100"
                                 value={grossMarginInput}
                                 onChange={e => setGrossMarginInput(e.target.value)}
-                                className="bg-gray-900 border border-gray-700 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                className="input-field"
                             />
                             <button 
                                 type="submit" 
                                 disabled={submittingMargin}
-                                className="mt-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md py-2 font-medium transition-colors"
+                                className="btn-primary mt-4"
                             >
                                 {submittingMargin ? 'Updating...' : 'Update Margin'}
                             </button>
                         </form>
                     </div>
 
-                    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
-                        <h3 className="text-gray-300 font-medium mb-4">Marketing Spend</h3>
-                        <form onSubmit={handleSpendSubmit} className="flex flex-col gap-3">
-                            <label className="text-sm text-gray-400">Month</label>
+                    <div className="glass-panel p-6">
+                        <h3 className="card-title" style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>Marketing Spend</h3>
+                        <form onSubmit={handleSpendSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <label className="text-muted" style={{ fontSize: '0.875rem' }}>Month</label>
                             <select 
                                 value={spendPeriodInput}
                                 onChange={e => setSpendPeriodInput(e.target.value)}
-                                className="bg-gray-900 border border-gray-700 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                className="input-field"
                             >
                                 {[...mrr].reverse().map(m => (
                                     <option key={m.month} value={m.month}>
@@ -180,20 +180,20 @@ export const UnitEconomicsView: React.FC = () => {
                                 ))}
                             </select>
                             
-                            <label className="text-sm text-gray-400 mt-2">Spend Amount ($)</label>
+                            <label className="text-muted mt-4" style={{ fontSize: '0.875rem' }}>Spend Amount ($)</label>
                             <input 
                                 type="number" 
                                 step="1"
                                 min="0"
                                 value={spendAmountInput}
                                 onChange={e => setSpendAmountInput(e.target.value)}
-                                className="bg-gray-900 border border-gray-700 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                className="input-field"
                                 placeholder="e.g. 5000"
                             />
                             <button 
                                 type="submit" 
                                 disabled={submittingSpend}
-                                className="mt-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md py-2 font-medium transition-colors"
+                                className="btn-primary mt-4"
                             >
                                 {submittingSpend ? 'Adding...' : 'Add Spend'}
                             </button>

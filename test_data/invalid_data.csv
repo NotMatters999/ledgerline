@@ -1,0 +1,6 @@
+Customer ID,Date,MRR Amount
+cust_001,2024-01-01,100.00
+cust_002,invalid_date,250.50
+,2024-02-01,100.00
+cust_004,2024-02-01,-50.00
+cust_005,2025-01-01,NaN

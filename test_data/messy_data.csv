@@ -1,0 +1,19 @@
+CUSTOMER,INVOICE_DATE,AMOUNT,CURRENCY,PLAN
+Acme Corp,2024-01-01,1000,USD,Enterprise
+Globex,2024-01-01,500,USD,Pro
+Soylent,2024-01-01,250,USD,Starter
+Initech,2024-01-01,500,USD,Pro
+Acme Corp,2024-02-01,1000,USD,Enterprise
+Globex,2024-02-01,600,USD,Pro
+Initech,2024-02-01,500,USD,Pro
+Umbrella,2024-02-01,1500,USD,Enterprise
+Acme Corp,2024-03-01,1000,USD,Enterprise
+Initech,2024-03-01,500,USD,Pro
+Umbrella,2024-03-01,1500,USD,Enterprise
+Soylent,2024-03-01,350,USD,Starter
+Acme Corp,2024-04-01,1200,USD,Enterprise
+Globex,2024-04-01,600,USD,Pro
+Initech,2024-04-01,250,USD,Starter
+Umbrella,2024-04-01,1500,USD,Enterprise
+Soylent,2024-04-01,350,USD,Starter
+Massive Dynamic,2024-04-01,2000,USD,Enterprise

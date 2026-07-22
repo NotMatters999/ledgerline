@@ -14,8 +14,9 @@ pub fn calculate_cac(conn: &Connection) -> Result<Vec<CacMovement>, duckdb::Erro
     let mrr_data = calculate_mrr(conn)?;
 
     let mut stmt = conn.prepare(
-        "SELECT date_trunc('month', period)::DATE as month, SUM(amount) as spend 
-         FROM marketing_spend 
+        "SELECT month, SUM(marketing_spend) as spend 
+         FROM monthly_assumptions 
+         WHERE marketing_spend IS NOT NULL
          GROUP BY month"
     )?;
     
@@ -23,15 +24,16 @@ pub fn calculate_cac(conn: &Connection) -> Result<Vec<CacMovement>, duckdb::Erro
     let mut spend_by_month = HashMap::new();
     
     while let Some(row) = rows.next()? {
-        let month: chrono::NaiveDate = row.get(0)?;
+        let month: String = row.get(0)?; // "YYYY-MM"
         let spend: f64 = row.get(1)?;
-        spend_by_month.insert(month.format("%Y-%m-%d").to_string(), spend);
+        spend_by_month.insert(month, spend);
     }
 
     let mut cac_data = Vec::new();
 
     for m in mrr_data {
-        let spend = spend_by_month.get(&m.month).cloned().unwrap_or(0.0);
+        let month_key = m.month.chars().take(7).collect::<String>(); // YYYY-MM
+        let spend = spend_by_month.get(&month_key).cloned().unwrap_or(0.0);
         let mut cac = 0.0;
         
         if m.new_customers > 0 {

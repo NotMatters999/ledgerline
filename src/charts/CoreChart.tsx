@@ -8,6 +8,8 @@ import {
     LegendComponent,
     VisualMapComponent,
     MarkLineComponent,
+    AxisPointerComponent,
+    DatasetComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
@@ -22,6 +24,8 @@ echarts.use([
     BarChart,
     HeatmapChart,
     CanvasRenderer,
+    AxisPointerComponent,
+    DatasetComponent,
 ]);
 
 interface CoreChartProps {

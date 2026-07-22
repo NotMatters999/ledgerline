@@ -9,17 +9,17 @@ interface MetricCardProps {
 
 export const MetricCard: React.FC<MetricCardProps> = ({ title, value, subtitle, trend }) => {
     return (
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl flex flex-col justify-between transition-transform hover:-translate-y-1 hover:shadow-2xl duration-300">
-            <h3 className="text-gray-400 text-sm font-medium tracking-wide">{title}</h3>
-            <div className="mt-4 flex items-baseline gap-2">
-                <span className="text-3xl font-semibold text-white tracking-tight">{value}</span>
+        <div className="glass-panel animated-card p-6 metric-card-content">
+            <h3 className="card-title">{title}</h3>
+            <div className="flex-center" style={{ justifyContent: 'flex-start', gap: '0.5rem', marginTop: '1rem' }}>
+                <span className="card-value">{value}</span>
                 {trend !== undefined && (
-                    <span className={`text-sm font-medium ${trend >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 500 }} className={trend >= 0 ? 'trend-up' : 'trend-down'}>
                         {trend > 0 ? '+' : ''}{trend}%
                     </span>
                 )}
             </div>
-            {subtitle && <p className="text-gray-500 text-xs mt-2">{subtitle}</p>}
+            {subtitle && <p className="text-muted" style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>{subtitle}</p>}
         </div>
     );
 };

@@ -69,7 +69,7 @@ pub fn calculate_mrr(conn: &Connection) -> Result<Vec<MrrMovement>, duckdb::Erro
 
     let mut results = Vec::new();
     let mut prev_mrr_state: HashMap<String, f64> = HashMap::new();
-    let mut ever_active: HashSet<String> = HashSet::new();
+    let mut last_active_month: HashMap<String, NaiveDate> = HashMap::new();
 
     for month in months {
         let mut movement = MrrMovement {
@@ -80,7 +80,6 @@ pub fn calculate_mrr(conn: &Connection) -> Result<Vec<MrrMovement>, duckdb::Erro
         let current_month_data = data_by_month.get(&month).cloned().unwrap_or_default();
         let mut next_mrr_state = HashMap::new();
 
-        // Process every customer that was active last month OR active this month
         let mut customers_to_check = prev_mrr_state.keys().cloned().collect::<HashSet<_>>();
         customers_to_check.extend(current_month_data.keys().cloned());
 
@@ -96,9 +95,19 @@ pub fn calculate_mrr(conn: &Connection) -> Result<Vec<MrrMovement>, duckdb::Erro
                 movement.ending_customers += 1;
                 
                 if prev == 0.0 {
-                    if ever_active.contains(&cust) {
-                        movement.reactivation += curr;
-                        movement.new_customers += 1; // Reactivations count as new logos for the period
+                    if let Some(last_active) = last_active_month.get(&cust) {
+                        // Calculate month difference
+                        let diff_years = month.year() - last_active.year();
+                        let diff_months = diff_years * 12 + month.month() as i32 - last_active.month() as i32;
+                        
+                        // If diff_months is 2, it means 1 full calendar month gap (e.g. Dec to Feb)
+                        if diff_months <= 2 {
+                            movement.expansion += curr;
+                            movement.new_customers += 1; // Need to add logo back since it was removed during churn
+                        } else {
+                            movement.reactivation += curr;
+                            movement.new_customers += 1;
+                        }
                     } else {
                         movement.new += curr;
                         movement.new_customers += 1;
@@ -108,7 +117,8 @@ pub fn calculate_mrr(conn: &Connection) -> Result<Vec<MrrMovement>, duckdb::Erro
                 } else if curr < prev {
                     movement.contraction += prev - curr; 
                 }
-                ever_active.insert(cust.clone());
+                
+                last_active_month.insert(cust.clone(), month);
             } else if prev > 0.0 {
                 movement.churn += prev; 
                 movement.churned_customers += 1;

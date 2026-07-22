@@ -15,18 +15,18 @@ export const RetentionView: React.FC = () => {
 
     if (isLoading && retention.length === 0) {
         return (
-            <div className="flex h-full items-center justify-center">
-                <div className="animate-spin h-8 w-8 border-4 border-emerald-500 border-t-transparent rounded-full"></div>
+            <div className="flex-center" style={{ height: '100%', color: 'var(--text-primary)' }}>
+                <div className="spinner"></div>
             </div>
         );
     }
 
     if (error && retention.length === 0) {
         return (
-            <div className="flex h-full items-center justify-center text-rose-400">
-                <div className="bg-rose-500/10 p-6 rounded-2xl border border-rose-500/20">
-                    <h2 className="text-xl font-bold mb-2">Error Loading Retention</h2>
-                    <p>{error}</p>
+            <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
+                <div className="glass-panel p-6" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
+                    <h2 className="page-title" style={{ fontSize: '1.25rem', color: 'var(--status-danger)' }}>Error Loading Retention</h2>
+                    <p className="text-muted" style={{ marginTop: '0.5rem' }}>{error}</p>
                 </div>
             </div>
         );
@@ -37,13 +37,13 @@ export const RetentionView: React.FC = () => {
     const currentLogo = retention.length > 0 ? retention[retention.length - 1].logo_retention * 100 : 0;
 
     return (
-        <div className="w-full flex flex-col gap-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <header className="mb-2">
-                <h2 className="text-2xl font-bold tracking-tight text-white">Retention Deep Dive</h2>
-                <p className="text-gray-400 mt-1">Detailed analysis of revenue and customer retention metrics.</p>
+                <h2 className="page-title">Retention Deep Dive</h2>
+                <p className="page-subtitle">Detailed analysis of revenue and customer retention metrics.</p>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid-cards" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
                 <MetricCard 
                     title="Net Revenue Retention (NRR)" 
                     value={`${currentNrr.toFixed(1)}%`} 
@@ -61,7 +61,7 @@ export const RetentionView: React.FC = () => {
                 />
             </div>
 
-            <div className="w-full">
+            <div style={{ width: '100%' }}>
                 <RetentionChart data={retention} />
             </div>
         </div>

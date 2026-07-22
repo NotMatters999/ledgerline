@@ -56,7 +56,7 @@ pub fn setting_get_f64(workspace_id: String, key: String, state: State<'_, AppSt
 }
 
 #[tauri::command]
-pub fn marketing_spend_add(_workspace_id: String, period: String, amount: f64, channel: String, state: State<'_, AppState>) -> Result<(), String> {
+pub fn marketing_spend_add(_workspace_id: String, period: String, amount: f64, _channel: String, state: State<'_, AppState>) -> Result<(), String> {
     // Validation
     if amount < 0.0 {
         return Err("Marketing spend amount cannot be negative".into());
@@ -68,10 +68,15 @@ pub fn marketing_spend_add(_workspace_id: String, period: String, amount: f64, c
 
     let conn = get_workspace_conn(&_workspace_id, &state)?;
     
-    // We could either append or upsert. Let's append, as marketing_spend can have multiple channels per period.
+    let month_key = period.chars().take(7).collect::<String>(); // YYYY-MM
+
     conn.execute(
-        "INSERT INTO marketing_spend (period, amount, channel) VALUES (?, ?, ?)", 
-        duckdb::params![period, amount, channel]
+        "INSERT INTO monthly_assumptions (month, marketing_spend) 
+         VALUES (?, ?)
+         ON CONFLICT(month) DO UPDATE SET 
+            marketing_spend = monthly_assumptions.marketing_spend + excluded.marketing_spend,
+            updated_at = CURRENT_TIMESTAMP", 
+        duckdb::params![month_key, amount]
     ).map_err(|e| e.to_string())?;
     
     Ok(())
@@ -87,7 +92,7 @@ mod tests {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
             "CREATE TABLE mrr_log (customer_id VARCHAR, period DATE, mrr_amount DOUBLE, currency VARCHAR);
-             CREATE TABLE marketing_spend (period DATE, amount DOUBLE, channel VARCHAR);
+             CREATE TABLE monthly_assumptions (month VARCHAR PRIMARY KEY, marketing_spend DOUBLE, gross_margin DOUBLE, created_at TIMESTAMP, updated_at TIMESTAMP);
              CREATE TABLE settings (key VARCHAR, value VARCHAR);"
         ).unwrap();
 
@@ -143,7 +148,7 @@ mod tests {
 
         // 3. Marketing Spend and Payback
         // Payback = CAC / (ARPA * margin)
-        conn.execute("INSERT INTO marketing_spend (period, amount, channel) VALUES ('2024-03-15', 500.0, 'Total')").unwrap();
+        conn.execute("INSERT INTO monthly_assumptions (month, marketing_spend) VALUES ('2024-03', 500.0)").unwrap();
         
         // Wait, Payback engine CAC calculation for March:
         // Spends in March: 500. New customers in March: 0? 

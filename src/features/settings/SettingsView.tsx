@@ -67,58 +67,59 @@ export const SettingsView: React.FC = () => {
     };
 
     return (
-        <div className="w-full flex flex-col gap-6 h-full min-h-[600px] max-w-4xl mx-auto">
-            <header className="mb-2 border-b border-white/10 pb-4">
-                <h2 className="text-2xl font-bold tracking-tight text-white">Settings & Backups</h2>
-                <p className="text-gray-400 mt-1">Manage application settings and database snapshots.</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', height: '100%', minHeight: '600px', maxWidth: '896px', margin: '0 auto' }}>
+            <header className="mb-2" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
+                <h2 className="page-title">Settings & Backups</h2>
+                <p className="page-subtitle" style={{ marginBottom: 0 }}>Manage application settings and database snapshots.</p>
             </header>
 
             {actionError && (
-                <div className="bg-rose-500/10 text-rose-400 p-4 rounded-xl border border-rose-500/20 shadow-lg">
+                <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--status-danger)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                     {actionError}
                 </div>
             )}
             {actionSuccess && (
-                <div className="bg-emerald-500/10 text-emerald-400 p-4 rounded-xl border border-emerald-500/20 shadow-lg">
+                <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--status-success)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                     {actionSuccess}
                 </div>
             )}
 
             {/* Backup Management Section */}
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl flex flex-col gap-4">
-                <div className="flex justify-between items-center border-b border-white/10 pb-4">
+            <div className="glass-panel p-6" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="flex-between" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
                     <div>
-                        <h3 className="text-lg font-bold text-white">Database Backups</h3>
-                        <p className="text-sm text-gray-400">Automated snapshots are taken before every import. Retention is limited to the last 5 backups.</p>
+                        <h3 className="card-title" style={{ color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Database Backups</h3>
+                        <p className="text-muted" style={{ fontSize: '0.875rem' }}>Automated snapshots are taken before every import. Retention is limited to the last 5 backups.</p>
                     </div>
                     <button 
                         onClick={handleCreateBackup}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-sm font-medium transition-colors shadow-md"
+                        className="btn-primary"
                     >
                         Create Manual Backup
                     </button>
                 </div>
 
                 {loading ? (
-                    <div className="text-gray-400 py-4">Loading backups...</div>
+                    <div className="text-muted" style={{ padding: '1rem 0' }}>Loading backups...</div>
                 ) : backups.length === 0 ? (
-                    <div className="text-gray-400 py-4 italic">No backups found.</div>
+                    <div className="text-muted" style={{ padding: '1rem 0', fontStyle: 'italic' }}>No backups found.</div>
                 ) : (
-                    <div className="flex flex-col gap-2">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         {backups.map(b => (
-                            <div key={b} className="flex justify-between items-center p-3 rounded-lg bg-gray-900 border border-gray-800">
-                                <span className="font-mono text-sm text-gray-300">{b}</span>
+                            <div key={b} className="flex-between" style={{ padding: '0.75rem', borderRadius: '0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)' }}>
+                                <span className="text-muted" style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{b}</span>
                                 {pendingRestore?.filename === b ? (
-                                    <div className="flex gap-2">
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
                                         <button 
                                             onClick={handleRestoreConfirm}
-                                            className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded shadow transition-colors"
+                                            className="btn-primary"
+                                            style={{ background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)', boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)' }}
                                         >
                                             Confirm Overwrite
                                         </button>
                                         <button 
                                             onClick={handleRestoreCancel}
-                                            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium rounded transition-colors"
+                                            className="btn-secondary"
                                         >
                                             Cancel
                                         </button>
@@ -127,7 +128,7 @@ export const SettingsView: React.FC = () => {
                                     <button 
                                         onClick={() => handleRestoreRequest(b)}
                                         disabled={pendingRestore !== null}
-                                        className="px-3 py-1 bg-amber-600/20 text-amber-500 hover:bg-amber-600 hover:text-white border border-amber-600/30 text-xs font-medium rounded transition-all disabled:opacity-50"
+                                        className="btn-secondary"
                                     >
                                         Restore
                                     </button>

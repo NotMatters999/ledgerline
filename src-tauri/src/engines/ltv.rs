@@ -11,23 +11,36 @@ pub struct LtvMovement {
     pub churn_rate: f64,
 }
 
-fn get_gross_margin(conn: &Connection) -> f64 {
-    conn.query_row("SELECT value FROM settings WHERE key = 'gross_margin'", [], |row| {
+use std::collections::HashMap;
+
+pub fn calculate_ltv(conn: &Connection) -> Result<Vec<LtvMovement>, duckdb::Error> {
+    let mrr_data = calculate_mrr(conn)?;
+    
+    // Fetch monthly gross margins
+    let mut stmt = conn.prepare("SELECT month, gross_margin FROM monthly_assumptions WHERE gross_margin IS NOT NULL")?;
+    let mut rows = stmt.query([])?;
+    let mut margin_by_month: HashMap<String, f64> = HashMap::new();
+    while let Some(row) = rows.next()? {
+        let month: String = row.get(0)?;
+        let margin: f64 = row.get(1)?;
+        margin_by_month.insert(month, margin);
+    }
+
+    // Also get the global fallback gross_margin from settings just in case
+    let global_margin: f64 = conn.query_row("SELECT value FROM settings WHERE key = 'gross_margin'", [], |row| {
         let val: String = row.get(0)?;
         Ok(val)
     })
     .ok()
     .and_then(|s| s.parse::<f64>().ok())
-    .unwrap_or(1.0) // Default to 100% margin if not set
-}
+    .unwrap_or(1.0);
 
-pub fn calculate_ltv(conn: &Connection) -> Result<Vec<LtvMovement>, duckdb::Error> {
-    let mrr_data = calculate_mrr(conn)?;
-    let gross_margin = get_gross_margin(conn);
-    
     let mut ltv_data = Vec::new();
 
     for m in mrr_data {
+        let month_key = m.month.chars().take(7).collect::<String>(); // YYYY-MM
+        let gross_margin = margin_by_month.get(&month_key).cloned().unwrap_or(global_margin);
+
         let mut arpa = 0.0;
         let mut churn_rate = 0.0;
         let mut ltv = 0.0;

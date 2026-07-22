@@ -143,48 +143,51 @@ export const CohortView: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="flex h-full items-center justify-center">
-                <div className="animate-spin h-8 w-8 border-4 border-emerald-500 border-t-transparent rounded-full"></div>
+            <div className="flex-center" style={{ height: '100%', color: 'var(--text-primary)' }}>
+                <div className="spinner"></div>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="flex h-full items-center justify-center text-rose-400">
-                <p>Error loading cohorts: {error}</p>
+            <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
+                <div className="glass-panel p-6" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
+                    <h2 className="page-title" style={{ fontSize: '1.25rem', color: 'var(--status-danger)' }}>Error Loading Cohorts</h2>
+                    <p className="text-muted" style={{ marginTop: '0.5rem' }}>{error}</p>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl w-full h-[600px] flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-white tracking-tight">Cohort Analysis</h2>
-                <div className="flex gap-4">
-                    <div className="flex bg-gray-800 rounded-lg p-1">
+        <div className="glass-panel p-6" style={{ height: '600px', display: 'flex', flexDirection: 'column' }}>
+            <div className="flex-between mb-6">
+                <h2 className="page-title" style={{ fontSize: '1.25rem', marginBottom: 0 }}>Cohort Analysis</h2>
+                <div className="flex-center gap-4">
+                    <div className="nav-menu">
                         <button 
-                            className={`px-3 py-1 text-sm rounded-md transition-colors ${metricType === 'revenue' ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                            className={`nav-item ${metricType === 'revenue' ? 'active' : ''}`}
                             onClick={() => setMetricType('revenue')}
                         >
                             Revenue
                         </button>
                         <button 
-                            className={`px-3 py-1 text-sm rounded-md transition-colors ${metricType === 'customers' ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                            className={`nav-item ${metricType === 'customers' ? 'active' : ''}`}
                             onClick={() => setMetricType('customers')}
                         >
                             Customers
                         </button>
                     </div>
-                    <div className="flex bg-gray-800 rounded-lg p-1">
+                    <div className="nav-menu">
                         <button 
-                            className={`px-3 py-1 text-sm rounded-md transition-colors ${valueType === 'percentage' ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                            className={`nav-item ${valueType === 'percentage' ? 'active' : ''}`}
                             onClick={() => setValueType('percentage')}
                         >
                             Percentage
                         </button>
                         <button 
-                            className={`px-3 py-1 text-sm rounded-md transition-colors ${valueType === 'absolute' ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                            className={`nav-item ${valueType === 'absolute' ? 'active' : ''}`}
                             onClick={() => setValueType('absolute')}
                         >
                             Absolute
@@ -193,11 +196,11 @@ export const CohortView: React.FC = () => {
                 </div>
             </div>
             
-            <div className="flex-1 w-full relative">
+            <div style={{ flex: 1, width: '100%', position: 'relative' }}>
                 {option ? (
                     <CoreChart option={option} />
                 ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
                         No cohort data available
                     </div>
                 )}

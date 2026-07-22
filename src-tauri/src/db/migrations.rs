@@ -1,6 +1,7 @@
 use duckdb::{Connection, Result};
 
 const INITIAL_SCHEMA: &str = include_str!("../../migrations/0001_initial_schema.sql");
+const MONTHLY_ASSUMPTIONS: &str = include_str!("../../migrations/0002_monthly_assumptions.sql");
 
 struct Migration {
     version: i32,
@@ -11,6 +12,10 @@ const MIGRATIONS: &[Migration] = &[
     Migration {
         version: 1,
         script: INITIAL_SCHEMA,
+    },
+    Migration {
+        version: 2,
+        script: MONTHLY_ASSUMPTIONS,
     },
 ];
 
@@ -64,7 +69,7 @@ mod tests {
 
         // Verify tables exist
         let tables = vec![
-            "mrr_log", "customers", "marketing_spend",
+            "mrr_log", "customers", "monthly_assumptions",
             "settings", "import_history", "schema_version"
         ];
         
@@ -85,6 +90,6 @@ mod tests {
         
         let mut stmt = conn.prepare("SELECT MAX(version) FROM schema_version").unwrap();
         let version: i32 = stmt.query_row([], |row| row.get(0)).unwrap();
-        assert_eq!(version, 1);
+        assert_eq!(version, 2);
     }
 }

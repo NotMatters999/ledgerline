@@ -20,18 +20,18 @@ export const WaterfallView: React.FC = () => {
 
     if (isLoading && mrr.length === 0) {
         return (
-            <div className="flex h-full items-center justify-center">
-                <div className="animate-spin h-8 w-8 border-4 border-emerald-500 border-t-transparent rounded-full"></div>
+            <div className="flex-center" style={{ height: '100%', color: 'var(--text-primary)' }}>
+                <div className="spinner"></div>
             </div>
         );
     }
 
     if (error && mrr.length === 0) {
         return (
-            <div className="flex h-full items-center justify-center text-rose-400">
-                <div className="bg-rose-500/10 p-6 rounded-2xl border border-rose-500/20">
-                    <h2 className="text-xl font-bold mb-2">Error Loading Waterfall</h2>
-                    <p>{error}</p>
+            <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
+                <div className="glass-panel p-6" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
+                    <h2 className="page-title" style={{ fontSize: '1.25rem', color: 'var(--status-danger)' }}>Error Loading Waterfall</h2>
+                    <p className="text-muted" style={{ marginTop: '0.5rem' }}>{error}</p>
                 </div>
             </div>
         );
@@ -40,19 +40,19 @@ export const WaterfallView: React.FC = () => {
     const data = mrr.find(m => m.month === selectedMonth);
 
     return (
-        <div className="w-full flex flex-col gap-6">
-            <header className="mb-2 flex justify-between items-end">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <header className="mb-2 flex-between" style={{ alignItems: 'flex-end' }}>
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight text-white">MRR Waterfall</h2>
-                    <p className="text-gray-400 mt-1">A detailed bridge from Beginning MRR to Ending MRR.</p>
+                    <h2 className="page-title">MRR Waterfall</h2>
+                    <p className="page-subtitle" style={{ marginBottom: 0 }}>A detailed bridge from Beginning MRR to Ending MRR.</p>
                 </div>
                 {mrr.length > 0 && (
-                    <div className="flex flex-col gap-1">
-                        <label className="text-sm text-gray-400">Select Month</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <label className="text-muted" style={{ fontSize: '0.875rem' }}>Select Month</label>
                         <select 
                             value={selectedMonth}
                             onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="bg-gray-800 border border-gray-700 text-white rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            className="input-field"
                         >
                             {[...mrr].reverse().map(m => (
                                 <option key={m.month} value={m.month}>
@@ -64,11 +64,11 @@ export const WaterfallView: React.FC = () => {
                 )}
             </header>
 
-            <div className="w-full">
+            <div style={{ width: '100%' }}>
                 {data ? (
                     <WaterfallChart data={data} />
                 ) : (
-                    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 h-[500px] flex items-center justify-center text-gray-500">
+                    <div className="glass-panel flex-center text-muted" style={{ height: '500px' }}>
                         No data available for the selected month.
                     </div>
                 )}

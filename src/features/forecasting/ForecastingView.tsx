@@ -68,26 +68,31 @@ export const ForecastingView: React.FC = () => {
     const endMonth = forecastData.length > 0 ? forecastData[forecastData.length - 1].month.substring(0, 7) : '-';
 
     return (
-        <div className="w-full flex flex-col gap-6">
-            <header className="mb-2 flex justify-between items-end">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <header className="mb-2 flex-between" style={{ alignItems: 'flex-end' }}>
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight text-white">Scenario Forecasting</h2>
-                    <p className="text-gray-400 mt-1">Interactive 12-month MRR projection model.</p>
+                    <h2 className="page-title">Scenario Forecasting</h2>
+                    <p className="page-subtitle" style={{ marginBottom: 0 }}>Interactive 12-month MRR projection model.</p>
                 </div>
                 {avgLatency > 0 && (
-                    <div className={`text-xs px-3 py-1 rounded-full border ${avgLatency < 200 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                    <div style={{ 
+                        fontSize: '0.75rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', border: '1px solid',
+                        background: avgLatency < 200 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                        color: avgLatency < 200 ? 'var(--status-success)' : 'var(--status-warning)',
+                        borderColor: avgLatency < 200 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)'
+                    }}>
                         Avg Latency: {avgLatency.toFixed(1)}ms
                     </div>
                 )}
             </header>
 
             {error && (
-                <div className="bg-rose-500/10 text-rose-400 p-4 rounded-xl border border-rose-500/20">
+                <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--status-danger)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                     {error}
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid-cards">
                 <MetricCard 
                     title={`Projected MRR (${endMonth})`} 
                     value={formatCurrency(endMrr)} 
@@ -95,53 +100,53 @@ export const ForecastingView: React.FC = () => {
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                <div style={{ flex: '2 1 600px' }}>
                     <ForecastChart data={forecastData} />
                 </div>
                 
-                <div className="flex flex-col gap-6">
-                    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl flex flex-col gap-6">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: '1 1 300px' }}>
+                    <div className="glass-panel p-6" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         
                         <div>
-                            <div className="flex justify-between mb-2">
-                                <label className="text-sm font-medium text-gray-300">Monthly Churn Rate</label>
-                                <span className="text-sm text-emerald-400">{churnRate.toFixed(1)}%</span>
+                            <div className="flex-between mb-2">
+                                <label className="text-muted" style={{ fontSize: '0.875rem', fontWeight: 500 }}>Monthly Churn Rate</label>
+                                <span className="text-accent" style={{ fontSize: '0.875rem' }}>{churnRate.toFixed(1)}%</span>
                             </div>
                             <input 
                                 type="range" 
                                 min="0" max="10" step="0.1" 
                                 value={churnRate} 
                                 onChange={(e) => setChurnRate(parseFloat(e.target.value))}
-                                className="w-full accent-emerald-500"
+                                style={{ width: '100%', accentColor: 'var(--accent-primary)' }}
                             />
                         </div>
 
                         <div>
-                            <div className="flex justify-between mb-2">
-                                <label className="text-sm font-medium text-gray-300">Monthly Expansion Rate</label>
-                                <span className="text-sm text-emerald-400">{expansionRate.toFixed(1)}%</span>
+                            <div className="flex-between mb-2">
+                                <label className="text-muted" style={{ fontSize: '0.875rem', fontWeight: 500 }}>Monthly Expansion Rate</label>
+                                <span className="text-accent" style={{ fontSize: '0.875rem' }}>{expansionRate.toFixed(1)}%</span>
                             </div>
                             <input 
                                 type="range" 
                                 min="0" max="20" step="0.1" 
                                 value={expansionRate} 
                                 onChange={(e) => setExpansionRate(parseFloat(e.target.value))}
-                                className="w-full accent-emerald-500"
+                                style={{ width: '100%', accentColor: 'var(--accent-primary)' }}
                             />
                         </div>
 
                         <div>
-                            <div className="flex justify-between mb-2">
-                                <label className="text-sm font-medium text-gray-300">New MRR Added / Month</label>
-                                <span className="text-sm text-emerald-400">{formatCurrency(newMrr)}</span>
+                            <div className="flex-between mb-2">
+                                <label className="text-muted" style={{ fontSize: '0.875rem', fontWeight: 500 }}>New MRR Added / Month</label>
+                                <span className="text-accent" style={{ fontSize: '0.875rem' }}>{formatCurrency(newMrr)}</span>
                             </div>
                             <input 
                                 type="range" 
                                 min="0" max="10000" step="100" 
                                 value={newMrr} 
                                 onChange={(e) => setNewMrr(parseFloat(e.target.value))}
-                                className="w-full accent-emerald-500"
+                                style={{ width: '100%', accentColor: 'var(--accent-primary)' }}
                             />
                         </div>
 

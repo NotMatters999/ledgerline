@@ -37,32 +37,59 @@ export const ExportButton: React.FC = () => {
     };
 
     return (
-        <div className="relative group">
+        <div style={{ position: 'relative' }} className="export-dropdown-container">
             <button 
-                className="px-4 py-1.5 text-sm font-medium rounded-md bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition-all duration-200 flex items-center gap-2"
+                className="btn-primary"
                 disabled={isExporting}
+                style={{ padding: '0.375rem 1rem' }}
             >
                 {isExporting ? 'Exporting...' : 'Export Data'}
             </button>
             
             {/* Dropdown Menu (visible on hover) */}
-            <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-md shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+            <div 
+                className="export-dropdown"
+                style={{
+                    position: 'absolute', right: 0, marginTop: '0.5rem', width: '12rem',
+                    background: 'rgba(21, 26, 35, 0.95)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                    border: '1px solid var(--border-color)', borderRadius: '0.5rem',
+                    boxShadow: 'var(--shadow-lg)', zIndex: 50, display: 'flex', flexDirection: 'column'
+                }}
+            >
                 <button 
                     onClick={handleCsvExport}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white first:rounded-t-md"
+                    style={{
+                        width: '100%', textAlign: 'left', padding: '0.75rem 1rem', fontSize: '0.875rem',
+                        color: 'var(--text-primary)', background: 'transparent', border: 'none',
+                        borderTopLeftRadius: '0.5rem', borderTopRightRadius: '0.5rem', cursor: 'pointer',
+                        borderBottom: '1px solid rgba(255,255,255,0.05)'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                     Export as CSV
                 </button>
                 <button 
                     onClick={handlePdfExport}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white last:rounded-b-md"
+                    style={{
+                        width: '100%', textAlign: 'left', padding: '0.75rem 1rem', fontSize: '0.875rem',
+                        color: 'var(--text-primary)', background: 'transparent', border: 'none',
+                        borderBottomLeftRadius: '0.5rem', borderBottomRightRadius: '0.5rem', cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                     Export as PDF
                 </button>
             </div>
 
             {error && (
-                <div className="absolute right-0 mt-12 w-64 bg-rose-500/10 text-rose-400 p-2 rounded border border-rose-500/20 text-xs shadow-xl z-50">
+                <div style={{
+                    position: 'absolute', right: 0, marginTop: '3rem', width: '16rem',
+                    background: 'rgba(239, 68, 68, 0.1)', color: 'var(--status-danger)', padding: '0.5rem',
+                    borderRadius: '0.25rem', border: '1px solid rgba(239, 68, 68, 0.2)',
+                    fontSize: '0.75rem', boxShadow: 'var(--shadow-lg)', zIndex: 50
+                }}>
                     {error}
                 </div>
             )}

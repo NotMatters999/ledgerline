@@ -92,9 +92,9 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({ data }) => {
     }, [data]);
 
     return (
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl w-full h-[500px]">
-            <h3 className="text-gray-300 font-medium mb-4">MRR Waterfall ({data.month.substring(0, 7)})</h3>
-            <div className="w-full h-[420px]">
+        <div className="glass-panel p-6" style={{ width: '100%', height: '500px' }}>
+            <h3 className="card-title" style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>MRR Waterfall ({data.month.substring(0, 7)})</h3>
+            <div style={{ width: '100%', height: '420px' }}>
                 <CoreChart option={option} />
             </div>
         </div>

@@ -12,11 +12,28 @@ pub fn validate_row(
     customer_id: &str,
     date_str: &str,
     amount: f64,
+    currency: &str,
+    category: &str,
 ) -> Result<(), ValidationError> {
     if customer_id.trim().is_empty() {
         return Err(ValidationError {
             row_number,
             reason: "Missing customer_id".to_string(),
+        });
+    }
+
+    if currency.trim().is_empty() {
+        return Err(ValidationError {
+            row_number,
+            reason: "Empty currency".to_string(),
+        });
+    }
+
+    // Example category validation: block purely empty categories if they were mapped
+    if category.trim().is_empty() {
+        return Err(ValidationError {
+            row_number,
+            reason: "Invalid/Empty category".to_string(),
         });
     }
 
@@ -60,31 +77,31 @@ mod tests {
     #[test]
     fn test_valid_row() {
         let today_str = Utc::now().date_naive().format("%Y-%m-%d").to_string();
-        assert!(validate_row(1, "cust_1", &today_str, 100.0).is_ok());
+        assert!(validate_row(1, "cust_1", &today_str, 100.0, "USD", "Standard").is_ok());
     }
 
     #[test]
     fn test_invalid_negative_amount() {
-        let err = validate_row(1, "cust_1", "2024-01-01", -10.0).unwrap_err();
+        let err = validate_row(1, "cust_1", "2024-01-01", -10.0, "USD", "Standard").unwrap_err();
         assert_eq!(err.reason, "Negative MRR amounts are not allowed (unconditionally rejected)");
     }
 
     #[test]
     fn test_invalid_future_date() {
         let future_date = (Utc::now().date_naive() + Duration::days(1)).format("%Y-%m-%d").to_string();
-        let err = validate_row(1, "cust_1", &future_date, 100.0).unwrap_err();
+        let err = validate_row(1, "cust_1", &future_date, 100.0, "USD", "Standard").unwrap_err();
         assert_eq!(err.reason, "Future dates are not allowed");
     }
 
     #[test]
     fn test_missing_customer() {
-        let err = validate_row(1, "   ", "2024-01-01", 100.0).unwrap_err();
+        let err = validate_row(1, "   ", "2024-01-01", 100.0, "USD", "Standard").unwrap_err();
         assert_eq!(err.reason, "Missing customer_id");
     }
 
     #[test]
     fn test_nan_amount() {
-        let err = validate_row(1, "cust_1", "2024-01-01", f64::NAN).unwrap_err();
+        let err = validate_row(1, "cust_1", "2024-01-01", f64::NAN, "USD", "Standard").unwrap_err();
         assert_eq!(err.reason, "Amount is NaN or Infinity");
     }
 }

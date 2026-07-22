@@ -43,7 +43,7 @@ impl serde::Serialize for ImportError {
 pub struct PreviewResult {
     pub mapped_columns: MappedColumns,
     pub date_format: Option<String>,
-    pub sample_normalized: Vec<(String, String, f64)>, // (customer_id, date, amount)
+    pub sample_normalized: Vec<(String, String, f64, String, String)>, // (customer_id, date, amount, currency, category)
 }
 
 pub fn preview(path: &Path) -> Result<PreviewResult, ImportError> {
@@ -63,11 +63,16 @@ pub fn preview(path: &Path) -> Result<PreviewResult, ImportError> {
     let date_samples: Vec<String> = sample_rows.iter().map(|r| r.get(date_idx).cloned().unwrap_or_default()).collect();
     let format = detect_date_format(&date_samples)?;
 
+    let currency_idx = mapped.currency_idx;
+    let category_idx = mapped.category_idx;
+
     let mut sample_normalized = Vec::new();
     for row in sample_rows.iter().take(5) { 
         let customer = row.get(customer_idx).cloned().unwrap_or_default().trim().to_string();
         let date_str = row.get(date_idx).cloned().unwrap_or_default();
         let amount_str = row.get(amount_idx).cloned().unwrap_or_default();
+        let currency = currency_idx.and_then(|i| row.get(i)).cloned().unwrap_or_else(|| "USD".to_string()).trim().to_string();
+        let category = category_idx.and_then(|i| row.get(i)).cloned().unwrap_or_else(|| "Standard".to_string()).trim().to_string();
         
         if customer.is_empty() && date_str.is_empty() && amount_str.is_empty() {
             continue; 
@@ -76,7 +81,7 @@ pub fn preview(path: &Path) -> Result<PreviewResult, ImportError> {
         let date = format.parse(&date_str).ok_or_else(|| NormalizeError::InvalidDate(date_str.clone()))?;
         let amount = clean_currency(&amount_str)?;
 
-        sample_normalized.push((customer, date.format("%Y-%m-%d").to_string(), amount));
+        sample_normalized.push((customer, date.format("%Y-%m-%d").to_string(), amount, currency, category));
     }
 
     Ok(PreviewResult {
@@ -101,6 +106,9 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
     let date_samples: Vec<String> = parsed.rows.iter().take(50).map(|r| r.get(date_idx).cloned().unwrap_or_default()).collect();
     let format = detect_date_format(&date_samples)?;
 
+    let currency_idx = mapped.currency_idx;
+    let category_idx = mapped.category_idx;
+
     let mut normalized_rows = Vec::with_capacity(parsed.rows.len());
     let mut total_amount = 0.0;
 
@@ -108,6 +116,8 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
         let customer = row.get(customer_idx).cloned().unwrap_or_default().trim().to_string();
         let date_str = row.get(date_idx).cloned().unwrap_or_default();
         let amount_str = row.get(amount_idx).cloned().unwrap_or_default();
+        let currency = currency_idx.and_then(|i| row.get(i)).cloned().unwrap_or_else(|| "USD".to_string()).trim().to_string();
+        let category = category_idx.and_then(|i| row.get(i)).cloned().unwrap_or_else(|| "Standard".to_string()).trim().to_string();
 
         if customer.is_empty() && date_str.is_empty() && amount_str.is_empty() {
             continue; 
@@ -119,12 +129,12 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
         let date_iso = date.format("%Y-%m-%d").to_string();
         
         total_amount += amount;
-        normalized_rows.push((customer, date_iso, amount));
+        normalized_rows.push((customer, date_iso, amount, currency, category));
     }
 
     let mut validation_errors = Vec::new();
     for (i, row) in normalized_rows.iter().enumerate() {
-        if let Err(e) = validate_row(i + 1, &row.0, &row.1, row.2) {
+        if let Err(e) = validate_row(i + 1, &row.0, &row.1, row.2, &row.3, &row.4) {
             validation_errors.push(e);
         }
     }
@@ -169,9 +179,10 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
     }
 
     {
-        let mut insert_stmt = tx.prepare("INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES (?, ?, ?, 'USD')")?;
+        let mut insert_stmt = tx.prepare("INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES (?, ?, ?, ?)")?;
         for row in &normalized_rows {
-            insert_stmt.execute(duckdb::params![row.0, row.1, row.2])?;
+            // Note: Schema currently does not have a category column in mrr_log, so we just drop it or store in metadata later
+            insert_stmt.execute(duckdb::params![row.0, row.1, row.2, row.3])?;
         }
     }
 

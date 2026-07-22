@@ -68,9 +68,9 @@ export const LtvCacChart: React.FC<LtvCacChartProps> = ({ ltvData, cacData }) =>
     }, [ltvData, cacData]);
 
     return (
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl w-full h-[400px]">
-            <h3 className="text-gray-300 font-medium mb-4">LTV vs CAC Trend</h3>
-            <div className="w-full h-[320px]">
+        <div className="glass-panel p-6" style={{ width: '100%', height: '400px' }}>
+            <h3 className="card-title" style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>LTV vs CAC Trend</h3>
+            <div style={{ width: '100%', height: '320px' }}>
                 <CoreChart option={option} />
             </div>
         </div>
