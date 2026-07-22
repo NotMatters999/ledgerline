@@ -10,12 +10,14 @@ pub fn file_hash(path: &Path) -> Result<String, std::io::Error> {
     Ok(format!("{:x}", result))
 }
 
-pub fn dataset_fingerprint(normalized_rows: &[(String, String, f64)]) -> String {
+pub fn dataset_fingerprint(normalized_rows: &[(String, String, f64, String, String)]) -> String {
     let mut hasher = Sha256::new();
     for row in normalized_rows {
         hasher.update(row.0.as_bytes());
         hasher.update(row.1.as_bytes());
         hasher.update(row.2.to_string().as_bytes());
+        hasher.update(row.3.as_bytes());
+        hasher.update(row.4.as_bytes());
     }
     let result = hasher.finalize();
     format!("{:x}", result)
@@ -28,8 +30,8 @@ mod tests {
     #[test]
     fn test_dataset_fingerprint_deterministic() {
         let rows = vec![
-            ("cust_1".to_string(), "2024-01-01".to_string(), 100.0),
-            ("cust_2".to_string(), "2024-01-01".to_string(), 200.0),
+            ("cust_1".to_string(), "2024-01-01".to_string(), 100.0, "USD".to_string(), "SaaS".to_string()),
+            ("cust_2".to_string(), "2024-01-01".to_string(), 200.0, "USD".to_string(), "SaaS".to_string()),
         ];
         
         let fp1 = dataset_fingerprint(&rows);
@@ -37,8 +39,8 @@ mod tests {
         assert_eq!(fp1, fp2);
         
         let rows_diff = vec![
-            ("cust_1".to_string(), "2024-01-01".to_string(), 100.0),
-            ("cust_2".to_string(), "2024-01-01".to_string(), 200.1),
+            ("cust_1".to_string(), "2024-01-01".to_string(), 100.0, "USD".to_string(), "SaaS".to_string()),
+            ("cust_2".to_string(), "2024-01-01".to_string(), 200.1, "USD".to_string(), "SaaS".to_string()),
         ];
         let fp3 = dataset_fingerprint(&rows_diff);
         assert_ne!(fp1, fp3);
