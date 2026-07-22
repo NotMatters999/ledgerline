@@ -38,15 +38,6 @@
       "webviewInstallMode": {
         "type": "skip"
       }
-    },
-    "nsis": {
-      "displayLanguageSelector": false,
-      "languages": ["English"],
-      "installMode": "currentUser",
-      "shortcutName": "LedgerLine"
-    },
-    "msi": {
-      "enableElevatedUpdateTask": false
     }
   }
 }
