@@ -14,8 +14,9 @@ export default defineConfig(async () => ({
   build: {
     // No sourcemaps in production bundle — reduces output size significantly
     sourcemap: false,
-    // Raise warning threshold; our chunks are intentionally separated below
-    chunkSizeWarningLimit: 600,
+    // Raise warning threshold — vendor-echarts chunk is ~602KB which cannot be
+    // split further without dynamic imports across all chart components.
+    chunkSizeWarningLimit: 650,
     rollupOptions: {
       output: {
         // Split the 770KB monolith into async chunks:
