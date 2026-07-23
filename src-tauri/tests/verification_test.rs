@@ -1,19 +1,17 @@
 use duckdb::Connection;
 use ledgerline_lib::db::migrations::run_migrations;
-use ledgerline_lib::engines::mrr::{calculate_mrr, MrrMovement};
-use ledgerline_lib::engines::ltv::{calculate_ltv, LtvMovement};
-use ledgerline_lib::engines::cac::{calculate_cac, CacMovement};
-use ledgerline_lib::engines::arr::{calculate_arr, ArrMovement};
-use ledgerline_lib::engines::payback::{calculate_payback, PaybackMovement};
-use ledgerline_lib::engines::forecast::{calculate_forecast, ForecastParams, ForecastMovement};
-use ledgerline_lib::validation::{validate_row, ValidationError};
+use ledgerline_lib::engines::mrr::calculate_mrr;
+use ledgerline_lib::engines::ltv::calculate_ltv;
+use ledgerline_lib::engines::cac::calculate_cac;
+use ledgerline_lib::engines::arr::calculate_arr;
+use ledgerline_lib::engines::payback::calculate_payback;
+use ledgerline_lib::engines::forecast::{calculate_forecast, ForecastParams};
+use ledgerline_lib::validation::validate_row;
 use ledgerline_lib::import::pipeline::{commit, ImportError};
-use ledgerline_lib::import::pipeline::{commit, ImportError};
-use ledgerline_lib::commands::export::{export_csv, export_pdf, ExportRequest};
+use ledgerline_lib::commands::export::{generate_csv, generate_pdf};
 use ledgerline_lib::workspace::backup::BackupManager;
 use ledgerline_lib::workspace::manager::WorkspaceManager;
 use std::fs;
-use std::path::PathBuf;
 use std::time::Instant;
 
 #[test]
@@ -109,7 +107,7 @@ fn test_fix1_backup_system_roundtrip() {
 
     // 1. Create a backup via backend command
     let backup_manager = BackupManager::new(&temp_dir);
-    let backup_file = backup_manager.create_backup(&ws.db_path).unwrap();
+    let backup_file = backup_manager.backup(&ws.db_path, "Production Data").unwrap();
     
     // 2. Confirm the backup file exists on disk and report its size
     assert!(backup_file.exists());
@@ -124,7 +122,7 @@ fn test_fix1_backup_system_roundtrip() {
     assert!(!ws.db_path.exists());
 
     // 4. Run the restore command
-    backup_manager.restore_backup(&ws.db_path, &backup_file).unwrap();
+    backup_manager.restore(&backup_file, &ws.db_path).unwrap();
 
     // 5. Query restored workspace and confirm data matches
     assert!(ws.db_path.exists());
@@ -151,30 +149,15 @@ fn test_fix3_export_system_validity() {
     if temp_dir.exists() { fs::remove_dir_all(&temp_dir).unwrap(); }
     fs::create_dir_all(&temp_dir).unwrap();
     
-    let req = ExportRequest {
-        format: "csv".to_string(),
-        dataset: "mrr".to_string(),
-        path: temp_dir.join("export.csv").to_string_lossy().to_string(),
-    };
-    export_csv(&conn, req.clone()).unwrap();
-    
-    let csv_content = fs::read_to_string(&req.path).unwrap();
+    let csv_result = generate_csv(&conn).unwrap();
+    let csv_content = csv_result.mrr_csv;
     println!("--- EXPORT SYSTEM ---");
     println!("CSV Content Length: {} bytes", csv_content.len());
     println!("CSV Snippet: {}", &csv_content[0..usize::min(50, csv_content.len())]);
     assert!(csv_content.contains("customer_id") || csv_content.contains("Customer") || csv_content.contains("month")); 
     // Actual keys depend on struct serialization, but it will have content
 
-    // PDF Export Verification
-    let pdf_path = temp_dir.join("export.pdf").to_string_lossy().to_string();
-    let pdf_req = ExportRequest {
-        format: "pdf".to_string(),
-        dataset: "dashboard".to_string(),
-        path: pdf_path.clone(),
-    };
-    
-    export_pdf(&conn, pdf_req).unwrap();
-    let pdf_bytes = fs::read(&pdf_path).unwrap();
+    let pdf_bytes = generate_pdf(&conn).unwrap();
     println!("PDF Size: {} bytes", pdf_bytes.len());
     // Check PDF magic bytes (%PDF-)
     assert!(pdf_bytes.len() > 5);

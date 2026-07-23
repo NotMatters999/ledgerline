@@ -24,57 +24,46 @@ pub struct CsvExportResult {
     pub cohorts_csv: String,
 }
 
-#[tauri::command]
-pub fn export_csv(_workspace_id: String, state: State<'_, AppState>) -> Result<CsvExportResult, LedgerlineError> {
-    log_info("Export", "Starting CSV export generation");
-    let conn = get_workspace_conn(&_workspace_id, &state).map_err(LedgerlineError::from)?;
-
-    let mrr_data = calculate_mrr(&conn).map_err(|e| e.to_string())?;
-    let ret_data = calculate_retention(&conn).map_err(|e| e.to_string())?;
-    let cohort_data = calculate_cohorts(&conn).map_err(|e| e.to_string())?;
+pub fn generate_csv(conn: &Connection) -> Result<CsvExportResult, String> {
+    let mrr_data = calculate_mrr(conn)?;
+    let ret_data = calculate_retention(conn)?;
+    let cohort_data = calculate_cohorts(conn)?;
 
     // MRR CSV
     let mut mrr_wtr = WriterBuilder::new().from_writer(vec![]);
-    for row in &mrr_data {
-        mrr_wtr.serialize(row).map_err(|e| e.to_string())?;
-    }
+    for row in &mrr_data { mrr_wtr.serialize(row).map_err(|e| e.to_string())?; }
     let mrr_csv = String::from_utf8(mrr_wtr.into_inner().unwrap()).unwrap();
 
     // Retention CSV
     let mut ret_wtr = WriterBuilder::new().from_writer(vec![]);
-    for row in &ret_data {
-        ret_wtr.serialize(row).map_err(|e| e.to_string())?;
-    }
+    for row in &ret_data { ret_wtr.serialize(row).map_err(|e| e.to_string())?; }
     let retention_csv = String::from_utf8(ret_wtr.into_inner().unwrap()).unwrap();
 
     // Cohorts CSV
     let mut coh_wtr = WriterBuilder::new().from_writer(vec![]);
-    for row in &cohort_data.rows {
-        coh_wtr.serialize(row).map_err(|e| e.to_string())?;
-    }
+    for row in &cohort_data.rows { coh_wtr.serialize(row).map_err(|e| e.to_string())?; }
     let cohorts_csv = String::from_utf8(coh_wtr.into_inner().unwrap()).unwrap();
 
-    log_info("Export", "CSV export generation completed successfully");
-
-    Ok(CsvExportResult {
-        mrr_csv,
-        retention_csv,
-        cohorts_csv,
-    })
+    Ok(CsvExportResult { mrr_csv, retention_csv, cohorts_csv })
 }
 
 #[tauri::command]
-pub fn export_pdf(_workspace_id: String, state: State<'_, AppState>) -> Result<Vec<u8>, LedgerlineError> {
-    log_info("Export", "Starting PDF export generation");
+pub fn export_csv(_workspace_id: String, state: State<'_, AppState>) -> Result<CsvExportResult, LedgerlineError> {
+    log_info("Export", "Starting CSV export generation");
+    let conn = get_workspace_conn(&_workspace_id, &state).map_err(LedgerlineError::from)?;
+    let result = generate_csv(&conn).map_err(LedgerlineError::from)?;
+    log_info("Export", "CSV export generation completed successfully");
+    Ok(result)
+}
+
+pub fn generate_pdf(conn: &Connection) -> Result<Vec<u8>, String> {
     use genpdf::elements::Paragraph;
     use genpdf::{Document, SimplePageDecorator};
     
-    // We only create a structural PDF. We require a font family to be loaded.
-    // For this demonstration, we'll try to load a basic font. If not found, return an error.
     let font_bytes = include_bytes!("../../assets/fonts/arial.ttf").to_vec();
     let font_data = match genpdf::fonts::FontData::new(font_bytes, None) {
         Ok(data) => data,
-        Err(_) => return Err(LedgerlineError::from("Failed to parse embedded Arial font data")),
+        Err(_) => return Err("Failed to parse embedded Arial font data".to_string()),
     };
     
     let font_family = genpdf::fonts::FontFamily {
@@ -92,20 +81,24 @@ pub fn export_pdf(_workspace_id: String, state: State<'_, AppState>) -> Result<V
     doc.push(Paragraph::new("LedgerLine Executive Summary").aligned(genpdf::Alignment::Center));
     doc.push(Paragraph::new("This is a structural PDF report containing KPIs, retention tables, and forecast data."));
 
-    if let Ok(conn) = get_workspace_conn(&_workspace_id, &state) {
-        if let Ok(mrr) = calculate_mrr(&conn) {
-            if let Some(last) = mrr.last() {
-                doc.push(Paragraph::new(format!("Ending MRR for latest month: ${}", last.ending)));
-            }
+    if let Ok(mrr) = calculate_mrr(conn) {
+        if let Some(last) = mrr.last() {
+            doc.push(Paragraph::new(format!("Ending MRR for latest month: ${}", last.ending)));
         }
     }
 
     let mut buffer = Cursor::new(Vec::new());
     doc.render(&mut buffer).map_err(|e| e.to_string())?;
-    
-    log_info("Export", "PDF export generation completed successfully");
-    
     Ok(buffer.into_inner())
+}
+
+#[tauri::command]
+pub fn export_pdf(_workspace_id: String, state: State<'_, AppState>) -> Result<Vec<u8>, LedgerlineError> {
+    log_info("Export", "Starting PDF export generation");
+    let conn = get_workspace_conn(&_workspace_id, &state).map_err(LedgerlineError::from)?;
+    let buffer = generate_pdf(&conn).map_err(LedgerlineError::from)?;
+    log_info("Export", "PDF export generation completed successfully");
+    Ok(buffer)
 }
 
 #[cfg(test)]
