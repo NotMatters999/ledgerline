@@ -71,10 +71,10 @@ pub fn export_pdf(_workspace_id: String, state: State<'_, AppState>) -> Result<V
     
     // We only create a structural PDF. We require a font family to be loaded.
     // For this demonstration, we'll try to load a basic font. If not found, return an error.
-    let font_bytes = include_bytes!("../../../assets/fonts/LiberationSans-Regular.ttf").to_vec();
+    let font_bytes = include_bytes!("../../assets/fonts/arial.ttf").to_vec();
     let font_data = match genpdf::fonts::FontData::new(font_bytes, None) {
         Ok(data) => data,
-        Err(_) => return Err(LedgerlineError::from("Failed to parse embedded LiberationSans font data")),
+        Err(_) => return Err(LedgerlineError::from("Failed to parse embedded Arial font data")),
     };
     
     let font_family = genpdf::fonts::FontFamily {
