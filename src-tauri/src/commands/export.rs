@@ -71,11 +71,17 @@ pub fn export_pdf(_workspace_id: String, state: State<'_, AppState>) -> Result<V
     
     // We only create a structural PDF. We require a font family to be loaded.
     // For this demonstration, we'll try to load a basic font. If not found, return an error.
-    let font_family = match genpdf::fonts::from_files("assets/fonts", "LiberationSans", None) {
-        Ok(f) => f,
-        Err(_) => {
-            return Err(LedgerlineError::from("PDF generation requires LiberationSans font which is currently missing from assets/fonts."));
-        }
+    let font_bytes = include_bytes!("../../../assets/fonts/LiberationSans-Regular.ttf").to_vec();
+    let font_data = match genpdf::fonts::FontData::new(font_bytes, None) {
+        Ok(data) => data,
+        Err(_) => return Err(LedgerlineError::from("Failed to parse embedded LiberationSans font data")),
+    };
+    
+    let font_family = genpdf::fonts::FontFamily {
+        regular: font_data.clone(),
+        bold: font_data.clone(),
+        italic: font_data.clone(),
+        bold_italic: font_data.clone(),
     };
 
     let mut doc = Document::new(font_family);

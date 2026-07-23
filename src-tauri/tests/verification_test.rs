@@ -173,18 +173,11 @@ fn test_fix3_export_system_validity() {
         path: pdf_path.clone(),
     };
     
-    // Genpdf needs LiberationSans in assets/fonts to work, which is present in the workspace
-    // So we need to run it from the root directory or mock it.
-    // We will bypass full PDF generation if fonts are missing in the test env, but if they exist we test it.
-    if PathBuf::from("assets/fonts/LiberationSans-Regular.ttf").exists() {
-        export_pdf(&conn, pdf_req).unwrap();
-        let pdf_bytes = fs::read(&pdf_path).unwrap();
-        println!("PDF Size: {} bytes", pdf_bytes.len());
-        // Check PDF magic bytes (%PDF-)
-        assert!(pdf_bytes.len() > 5);
-        assert_eq!(&pdf_bytes[0..5], b"%PDF-");
-        println!("PDF magic bytes verified.");
-    } else {
-        println!("Skipping PDF full integration test because assets/fonts not in CWD of test runner. But logic is verified via error propagation test.");
-    }
+    export_pdf(&conn, pdf_req).unwrap();
+    let pdf_bytes = fs::read(&pdf_path).unwrap();
+    println!("PDF Size: {} bytes", pdf_bytes.len());
+    // Check PDF magic bytes (%PDF-)
+    assert!(pdf_bytes.len() > 5);
+    assert_eq!(&pdf_bytes[0..5], b"%PDF-");
+    println!("PDF magic bytes verified.");
 }

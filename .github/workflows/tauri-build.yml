@@ -40,6 +40,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Run Backend Tests
+        run: cargo test --test verification_test -- --nocapture
+        working-directory: src-tauri
+
       - name: Build Tauri App
         run: pnpm run tauri build
 
