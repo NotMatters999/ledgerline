@@ -379,3 +379,62 @@ body {
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
+
+/* ─── Text accent ─────────────────────────────────────────────────────────── */
+.text-accent { color: var(--accent-primary); }
+
+/* ─── Tooltip ─────────────────────────────────────────────────────────────── */
+.tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tooltip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: default;
+  flex-shrink: 0;
+  line-height: 1;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.tooltip-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 200px;
+  max-width: 280px;
+  background: rgba(10,16,30,0.98);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  pointer-events: none;
+  z-index: 500;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  white-space: normal;
+  text-align: left;
+}
+
+.tooltip-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(10,16,30,0.98);
+}
+

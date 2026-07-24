@@ -3,6 +3,8 @@ import { useFinancialsStore } from '../../store/financials';
 import { MetricCard } from '../dashboard/MetricCard';
 import { LtvCacChart } from '../../charts/LtvCacChart';
 import { setSetting, getSettingF64, addMarketingSpend } from '../../lib/ipc/settings';
+import { Tooltip } from '../../components/Tooltip';
+
 
 export const UnitEconomicsView: React.FC = () => {
     const { ltv, cac, payback, mrr, isLoading, error, fetchData } = useFinancialsStore();
@@ -113,26 +115,21 @@ export const UnitEconomicsView: React.FC = () => {
             )}
 
             <div className="grid-cards">
-                <MetricCard 
-                    title="Customer LTV" 
-                    value={formatCurrency(currentLtv)} 
-                    subtitle="Last Month"
-                />
-                <MetricCard 
-                    title="Customer CAC" 
-                    value={formatCurrency(currentCac)} 
-                    subtitle="Last Month"
-                />
-                <MetricCard 
-                    title="LTV:CAC Ratio" 
-                    value={`${currentRatio.toFixed(1)}x`} 
-                    subtitle="Last Month"
-                />
-                <MetricCard 
-                    title="Payback Period" 
-                    value={`${currentPayback.toFixed(1)} mo`} 
-                    subtitle="Last Month"
-                />
+                {[
+                    { label: 'Customer LTV', value: formatCurrency(currentLtv), tip: 'Lifetime Value = ARPA × Gross Margin ÷ Churn Rate. Estimates total revenue from an average customer over their lifetime.' },
+                    { label: 'Customer CAC', value: formatCurrency(currentCac), tip: 'Customer Acquisition Cost = Marketing Spend ÷ New Customers acquired that month.' },
+                    { label: 'LTV:CAC Ratio', value: `${currentRatio.toFixed(1)}x`, tip: 'Benchmark: >3× is healthy for B2B SaaS. Below 1× means you spend more to acquire than you recover.' },
+                    { label: 'Payback Period', value: `${currentPayback.toFixed(1)} mo`, tip: 'Months to recover CAC from gross margin. Benchmark: <12 months for efficient SaaS growth.' },
+                ].map(({ label, value, tip }) => (
+                    <div key={label} className="metric-card">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.25rem' }}>
+                            <p className="card-title" style={{ margin: 0 }}>{label}</p>
+                            <Tooltip text={tip} />
+                        </div>
+                        <p className="card-value">{value}</p>
+                        <p className="text-muted" style={{ fontSize: '0.75rem', marginTop: '0.375rem' }}>Last Month</p>
+                    </div>
+                ))}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' }}>

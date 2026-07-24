@@ -12,6 +12,7 @@ use commands::engines::{mrr_get, arr_get, retention_get, ltv_get, cac_get, payba
 use commands::settings::{setting_set, setting_get, setting_get_f64, marketing_spend_add};
 use commands::export::{export_csv, export_pdf};
 use commands::backup::{backup_list, backup_create, backup_restore_request, backup_restore_confirm, BackupTokenStore};
+use commands::data::{mrr_log_list, mrr_log_count, mrr_log_add, mrr_log_delete};
 use workspace::manager::WorkspaceManager;
 use workspace::backup::BackupManager;
 use utils::logger::Logger;
@@ -78,7 +79,11 @@ pub fn run() {
             backup_list,
             backup_create,
             backup_restore_request,
-            backup_restore_confirm
+            backup_restore_confirm,
+            mrr_log_list,
+            mrr_log_count,
+            mrr_log_add,
+            mrr_log_delete
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

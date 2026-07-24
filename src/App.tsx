@@ -4,12 +4,15 @@ import { CohortView } from "./features/cohorts/CohortView";
 import { RetentionView } from "./features/retention/RetentionView";
 import { WaterfallView } from "./features/waterfall/WaterfallView";
 import { UnitEconomicsView } from "./features/economics/UnitEconomicsView";
+import { CustomerEconomicsView } from "./features/economics/CustomerEconomicsView";
 import { ForecastingView } from "./features/forecasting/ForecastingView";
+import { ChurnAnalyticsView } from "./features/churn/ChurnAnalyticsView";
 import { ExportButton } from "./features/export/ExportButton";
 import { DocumentationView } from "./features/docs/DocumentationView";
 import { SettingsView } from "./features/settings/SettingsView";
+import { DataManagementView } from "./features/data/DataManagementView";
 
-type Tab = 'dashboard' | 'cohorts' | 'retention' | 'waterfall' | 'economics' | 'forecasting' | 'docs' | 'settings';
+type Tab = 'dashboard' | 'cohorts' | 'retention' | 'waterfall' | 'economics' | 'customers' | 'churn' | 'forecasting' | 'data' | 'docs' | 'settings';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -56,10 +59,31 @@ function App() {
               Economics
             </button>
             <button
+              onClick={() => setActiveTab('customers')}
+              className={`nav-item ${activeTab === 'customers' ? 'active' : ''}`}
+            >
+              Customers
+            </button>
+            <button
+              onClick={() => setActiveTab('churn')}
+              className={`nav-item ${activeTab === 'churn' ? 'active' : ''}`}
+            >
+              Churn
+            </button>
+            <button
               onClick={() => setActiveTab('forecasting')}
               className={`nav-item ${activeTab === 'forecasting' ? 'active' : ''}`}
             >
               Forecast
+            </button>
+            <button
+              onClick={() => setActiveTab('data')}
+              className={`nav-item ${activeTab === 'data' ? 'active' : ''}`}
+            >
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+              Data
             </button>
             <button
               onClick={() => setActiveTab('docs')}
@@ -95,7 +119,10 @@ function App() {
         {activeTab === 'retention' && <RetentionView />}
         {activeTab === 'waterfall' && <WaterfallView />}
         {activeTab === 'economics' && <UnitEconomicsView />}
+        {activeTab === 'customers' && <CustomerEconomicsView />}
+        {activeTab === 'churn' && <ChurnAnalyticsView />}
         {activeTab === 'forecasting' && <ForecastingView />}
+        {activeTab === 'data' && <DataManagementView />}
         {activeTab === 'docs' && <DocumentationView />}
         {activeTab === 'settings' && <SettingsView />}
       </div>
