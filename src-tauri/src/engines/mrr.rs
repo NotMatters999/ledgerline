@@ -1,6 +1,6 @@
 use duckdb::Connection;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use chrono::{NaiveDate, Datelike};
 
 #[derive(Debug, Serialize, Clone, Default)]
