@@ -25,9 +25,9 @@ pub struct CsvExportResult {
 }
 
 pub fn generate_csv(conn: &Connection) -> Result<CsvExportResult, String> {
-    let mrr_data = calculate_mrr(conn)?;
-    let ret_data = calculate_retention(conn)?;
-    let cohort_data = calculate_cohorts(conn)?;
+    let mrr_data = calculate_mrr(conn).map_err(|e| e.to_string())?;
+    let ret_data = calculate_retention(conn).map_err(|e| e.to_string())?;
+    let cohort_data = calculate_cohorts(conn).map_err(|e| e.to_string())?;
 
     // MRR CSV
     let mut mrr_wtr = WriterBuilder::new().from_writer(vec![]);
