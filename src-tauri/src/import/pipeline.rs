@@ -154,7 +154,7 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
     while let Some(row) = rows.next()? {
         let h: String = row.get(0)?;
         let fp: String = row.get(1)?;
-        let rc: i32 = row.get(2)?;
+        let rc: i64 = row.get(2)?;
         let ta: f64 = row.get(3)?;
 
         if h == f_hash && !f_hash.is_empty() {
@@ -163,7 +163,7 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
         if fp == f_print {
             return Err(ImportError::DuplicateFingerprint);
         }
-        if rc == normalized_rows.len() as i32 && (ta - total_amount).abs() < 0.01 {
+        if rc == normalized_rows.len() as i64 && (ta - total_amount).abs() < 0.01 {
             return Err(ImportError::LikelyDuplicate);
         }
     }
@@ -175,7 +175,7 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
 
     {
         let mut app_stmt = tx.prepare("INSERT INTO import_history (id, file_hash, fingerprint, imported_at, row_count, status, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?)")?;
-        app_stmt.execute(duckdb::params![import_id, f_hash, f_print, Utc::now().to_rfc3339(), normalized_rows.len() as i32, "SUCCESS", total_amount])?;
+        app_stmt.execute(duckdb::params![import_id, f_hash, f_print, Utc::now().to_rfc3339(), normalized_rows.len() as i64, "SUCCESS", total_amount])?;
     }
 
     {

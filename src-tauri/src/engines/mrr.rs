@@ -1,6 +1,6 @@
 use duckdb::Connection;
 use serde::Serialize;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use chrono::{NaiveDate, Datelike};
 
 #[derive(Debug, Serialize, Clone, Default)]
@@ -35,14 +35,11 @@ pub fn calculate_mrr(conn: &Connection) -> Result<Vec<MrrMovement>, duckdb::Erro
     
     // month_start -> customer_id -> mrr
     let mut data_by_month: std::collections::BTreeMap<NaiveDate, HashMap<String, f64>> = std::collections::BTreeMap::new();
-    let mut all_customers = HashSet::new();
-
     while let Some(row) = rows.next()? {
         let cust: String = row.get(0)?;
         let month: NaiveDate = row.get(1)?;
         let mrr: f64 = row.get(2)?;
         
-        all_customers.insert(cust.clone());
         data_by_month.entry(month).or_default().insert(cust, mrr);
     }
 
