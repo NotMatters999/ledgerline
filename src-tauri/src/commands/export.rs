@@ -41,7 +41,27 @@ pub fn generate_csv(conn: &Connection) -> Result<CsvExportResult, String> {
 
     // Cohorts CSV
     let mut coh_wtr = WriterBuilder::new().from_writer(vec![]);
-    for row in &cohort_data.rows { coh_wtr.serialize(row).map_err(|e| e.to_string())?; }
+    #[derive(Serialize)]
+    struct FlatCohortRow<'a> {
+        join_month: &'a str,
+        new_customers: usize,
+        new_revenue: f64,
+        month_index: usize,
+        retained_customers: usize,
+        retained_revenue: f64,
+    }
+    for row in &cohort_data.rows {
+        for cell in &row.data {
+            coh_wtr.serialize(FlatCohortRow {
+                join_month: &row.join_month,
+                new_customers: row.new_customers,
+                new_revenue: row.new_revenue,
+                month_index: cell.month_index,
+                retained_customers: cell.retained_customers,
+                retained_revenue: cell.retained_revenue,
+            }).map_err(|e| e.to_string())?;
+        }
+    }
     let cohorts_csv = String::from_utf8(coh_wtr.into_inner().unwrap()).unwrap();
 
     Ok(CsvExportResult { mrr_csv, retention_csv, cohorts_csv })
