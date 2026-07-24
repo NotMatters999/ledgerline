@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useFinancialsStore } from '../../store/financials';
-import { MetricCard } from '../dashboard/MetricCard';
+
 import { LtvCacChart } from '../../charts/LtvCacChart';
 import { setSetting, getSettingF64, addMarketingSpend } from '../../lib/ipc/settings';
 import { Tooltip } from '../../components/Tooltip';
