@@ -15,8 +15,8 @@ pub fn setting_set(_workspace_id: String, key: String, value: String, state: Sta
     // Validation
     if key == "gross_margin" {
         if let Ok(v) = value.parse::<f64>() {
-            if v < 0.0 || v > 100.0 {
-                return Err("Gross margin must be between 0 and 100".into());
+            if v < 0.0 || v > 1.0 {
+                return Err("Gross margin must be between 0.0 and 1.0 (e.g. 0.85 for 85%)".into());
             }
         } else {
             return Err("Gross margin must be a number".into());

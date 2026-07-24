@@ -12,7 +12,7 @@ CREATE TABLE monthly_assumptions (
 -- Migrate existing data from marketing_spend
 INSERT INTO monthly_assumptions (month, marketing_spend, gross_margin)
 SELECT 
-    period_start AS month, 
+    period AS month, 
     amount AS marketing_spend, 
     NULL AS gross_margin
 FROM marketing_spend;

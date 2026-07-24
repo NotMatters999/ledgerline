@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS customers (
     customer_id VARCHAR PRIMARY KEY,
     first_seen DATE NOT NULL,
     status VARCHAR NOT NULL,
-    metadata JSON
+    metadata VARCHAR
 );
 
 CREATE TABLE IF NOT EXISTS mrr_log (

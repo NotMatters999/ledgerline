@@ -4,7 +4,6 @@ use ledgerline_lib::engines::mrr::calculate_mrr;
 use ledgerline_lib::engines::ltv::calculate_ltv;
 use ledgerline_lib::engines::cac::calculate_cac;
 use ledgerline_lib::engines::arr::calculate_arr;
-use ledgerline_lib::engines::payback::calculate_payback;
 use ledgerline_lib::engines::forecast::{calculate_forecast, ForecastParams};
 use ledgerline_lib::validation::validate_row;
 use ledgerline_lib::commands::export::{generate_csv, generate_pdf};
