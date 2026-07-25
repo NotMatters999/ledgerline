@@ -4,7 +4,7 @@ import { ForecastMovement } from '../../lib/ipc/engines';
 import { ForecastChart } from '../../charts/ForecastChart';
 import { MetricCard } from '../dashboard/MetricCard';
 
-export const ForecastingView: React.FC = () => {
+export const ForecastingView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
     const [churnRate, setChurnRate] = useState<number>(2.0); // 2.0%
     const [expansionRate, setExpansionRate] = useState<number>(3.0); // 3.0%
     const [newMrr, setNewMrr] = useState<number>(1000); // $1,000
@@ -22,7 +22,7 @@ export const ForecastingView: React.FC = () => {
         
         try {
             const data = await invoke<ForecastMovement[]>('forecast_get', {
-                workspaceId: 'default',
+                workspaceId: activeWorkspaceId,
                 params: {
                     monthly_churn_rate: churn / 100.0,
                     monthly_expansion_rate: exp / 100.0,
@@ -54,12 +54,12 @@ export const ForecastingView: React.FC = () => {
         
         debounceRef.current = window.setTimeout(() => {
             fetchForecast(churnRate, expansionRate, newMrr);
-        }, 80); // 80ms debounce for responsive drag while keeping <200ms budget safe
+        }, 80);
 
         return () => {
             if (debounceRef.current) window.clearTimeout(debounceRef.current);
         };
-    }, [churnRate, expansionRate, newMrr]);
+    }, [activeWorkspaceId, churnRate, expansionRate, newMrr]);
 
     const formatCurrency = (val: number) => 
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);

@@ -11,7 +11,7 @@ import { useFinancialsStore } from '../../store/financials';
 
 const PAGE_SIZE = 50;
 
-export const DataManagementView: React.FC = () => {
+export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
     const [rows, setRows] = useState<MrrLogRow[]>([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(0);
@@ -44,17 +44,17 @@ export const DataManagementView: React.FC = () => {
         setError(null);
         try {
             const [data, count] = await Promise.all([
-                listMrrLog('default', q, sb, sd, p * PAGE_SIZE, PAGE_SIZE),
-                countMrrLog('default', q),
+                listMrrLog(activeWorkspaceId, q, sb, sd, p * PAGE_SIZE, PAGE_SIZE),
+                countMrrLog(activeWorkspaceId, q),
             ]);
             setRows(data);
             setTotal(count);
-        } catch (e: any) {
-            setError(e?.toString() ?? 'Unknown error');
+        } catch (e: unknown) {
+            setError((e as Error)?.message ?? String(e));
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [activeWorkspaceId]);
 
     useEffect(() => {
         loadRows(page, search, sortBy, sortDir);
@@ -72,7 +72,7 @@ export const DataManagementView: React.FC = () => {
 
     const handleDelete = async (row: MrrLogRow) => {
         try {
-            const deleted = await deleteMrrLog('default', row.rowid);
+            const deleted = await deleteMrrLog(activeWorkspaceId, row.rowid);
             setLastDeleted(deleted);
             setUndoVisible(true);
             if (undoTimer.current) clearTimeout(undoTimer.current);
@@ -81,7 +81,7 @@ export const DataManagementView: React.FC = () => {
                 setLastDeleted(null);
             }, 5000);
             loadRows(page, search, sortBy, sortDir);
-            fetchData('default'); // refresh all charts
+            fetchData(activeWorkspaceId);
         } catch (e: any) {
             setError(e?.toString() ?? 'Delete failed');
         }
@@ -90,7 +90,7 @@ export const DataManagementView: React.FC = () => {
     const handleUndo = async () => {
         if (!lastDeleted) return;
         try {
-            await addMrrLog('default', {
+            await addMrrLog(activeWorkspaceId, {
                 customer_id: lastDeleted.customer_id,
                 period: lastDeleted.period,
                 mrr_amount: lastDeleted.mrr_amount,
@@ -100,7 +100,7 @@ export const DataManagementView: React.FC = () => {
             setLastDeleted(null);
             if (undoTimer.current) clearTimeout(undoTimer.current);
             loadRows(page, search, sortBy, sortDir);
-            fetchData('default');
+            fetchData(activeWorkspaceId);
         } catch (e: any) {
             setError(e?.toString() ?? 'Undo failed');
         }
@@ -111,12 +111,12 @@ export const DataManagementView: React.FC = () => {
         setSubmitting(true);
         setFormError(null);
         try {
-            await addMrrLog('default', formData);
+            await addMrrLog(activeWorkspaceId, formData);
             setShowAddForm(false);
             setFormData({ customer_id: '', period: new Date().toISOString().slice(0, 10), mrr_amount: 0, currency: 'USD' });
             loadRows(0, search, sortBy, sortDir);
             setPage(0);
-            fetchData('default');
+            fetchData(activeWorkspaceId);
         } catch (e: any) {
             setFormError(e?.toString() ?? 'Add failed');
         } finally {

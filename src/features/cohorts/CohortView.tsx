@@ -5,14 +5,14 @@ import { CoreChart } from '../../charts/CoreChart';
 type MetricType = 'revenue' | 'customers';
 type ValueType = 'percentage' | 'absolute';
 
-export const CohortView: React.FC = () => {
+export const CohortView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
     const { data, isLoading, error, fetchData } = useCohortStore();
     const [metricType, setMetricType] = useState<MetricType>('revenue');
     const [valueType, setValueType] = useState<ValueType>('percentage');
 
     useEffect(() => {
-        fetchData('default');
-    }, [fetchData]);
+        if (activeWorkspaceId) fetchData(activeWorkspaceId);
+    }, [activeWorkspaceId, fetchData]);
 
     const option = useMemo(() => {
         if (!data || data.rows.length === 0) return null;

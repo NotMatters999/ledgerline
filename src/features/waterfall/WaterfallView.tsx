@@ -2,15 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { useFinancialsStore } from '../../store/financials';
 import { WaterfallChart } from '../../charts/WaterfallChart';
 
-export const WaterfallView: React.FC = () => {
+interface Props { activeWorkspaceId: string; }
+
+export const WaterfallView: React.FC<Props> = ({ activeWorkspaceId }) => {
     const { mrr, isLoading, error, fetchData } = useFinancialsStore();
     const [selectedMonth, setSelectedMonth] = useState<string>('');
 
     useEffect(() => {
-        if (mrr.length === 0) {
-            fetchData('default');
+        if (activeWorkspaceId && mrr.length === 0) {
+            fetchData(activeWorkspaceId);
         }
-    }, [mrr.length, fetchData]);
+    }, [activeWorkspaceId, mrr.length, fetchData]);
 
     useEffect(() => {
         if (mrr.length > 0 && !selectedMonth) {
@@ -49,21 +51,14 @@ export const WaterfallView: React.FC = () => {
                 {mrr.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                         <label className="text-muted" style={{ fontSize: '0.875rem' }}>Select Month</label>
-                        <select 
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="input-field"
-                        >
+                        <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="input-field">
                             {[...mrr].reverse().map(m => (
-                                <option key={m.month} value={m.month}>
-                                    {m.month.substring(0, 7)}
-                                </option>
+                                <option key={m.month} value={m.month}>{m.month.substring(0, 7)}</option>
                             ))}
                         </select>
                     </div>
                 )}
             </header>
-
             <div style={{ width: '100%' }}>
                 {data ? (
                     <WaterfallChart data={data} />

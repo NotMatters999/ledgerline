@@ -6,7 +6,7 @@ import { setSetting, getSettingF64, addMarketingSpend } from '../../lib/ipc/sett
 import { Tooltip } from '../../components/Tooltip';
 
 
-export const UnitEconomicsView: React.FC = () => {
+export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
     const { ltv, cac, payback, mrr, isLoading, error, fetchData } = useFinancialsStore();
 
     const [grossMarginInput, setGrossMarginInput] = useState<string>('');
@@ -19,18 +19,18 @@ export const UnitEconomicsView: React.FC = () => {
 
     // Initialize inputs
     useEffect(() => {
-        if (ltv.length === 0) {
-            fetchData('default');
+        if (activeWorkspaceId && ltv.length === 0) {
+            fetchData(activeWorkspaceId);
         }
-        
-        getSettingF64('default', 'gross_margin')
+
+        getSettingF64(activeWorkspaceId, 'gross_margin')
             .then(val => setGrossMarginInput((val * 100).toString()))
-            .catch(() => setGrossMarginInput('100')); // Default is 100%
+            .catch(() => setGrossMarginInput('100'));
 
         if (mrr.length > 0) {
             setSpendPeriodInput(mrr[mrr.length - 1].month);
         }
-    }, [ltv.length, mrr.length, mrr, fetchData]);
+    }, [activeWorkspaceId, ltv.length, mrr.length, mrr, fetchData]);
 
     const handleMarginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -42,8 +42,8 @@ export const UnitEconomicsView: React.FC = () => {
                 throw new Error("Gross margin must be between 0 and 100");
             }
             const decimal = percentage / 100;
-            await setSetting('default', 'gross_margin', decimal.toString());
-            await fetchData('default'); // Global refetch to update all charts
+            await setSetting(activeWorkspaceId, 'gross_margin', decimal.toString());
+            await fetchData(activeWorkspaceId);
         } catch (err: any) {
             setActionError(err.toString());
         } finally {
@@ -64,9 +64,9 @@ export const UnitEconomicsView: React.FC = () => {
                 throw new Error("Please select a month");
             }
             
-            await addMarketingSpend('default', spendPeriodInput, amount, 'Total');
+            await addMarketingSpend(activeWorkspaceId, spendPeriodInput, amount, 'Total');
             setSpendAmountInput('');
-            await fetchData('default'); // Global refetch
+            await fetchData(activeWorkspaceId);
         } catch (err: any) {
             setActionError(err.toString());
         } finally {

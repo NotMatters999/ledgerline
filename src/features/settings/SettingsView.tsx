@@ -4,7 +4,7 @@ import { getSetting, setSetting } from '../../lib/ipc/settings';
 
 type ActiveTab = 'backups' | 'preferences';
 
-export const SettingsView: React.FC = () => {
+export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
     const [activeTab, setActiveTab] = useState<ActiveTab>('backups');
 
     // ── Backup state ───────────────────────────────────────────────────────────
@@ -24,9 +24,9 @@ export const SettingsView: React.FC = () => {
     const fetchBackups = async () => {
         try {
             setLoading(true);
-            setBackups(await listBackups('default'));
-        } catch (err: any) {
-            setActionError(err.toString());
+            setBackups(await listBackups(activeWorkspaceId));
+        } catch (err: unknown) {
+            setActionError(String(err));
         } finally {
             setLoading(false);
         }
@@ -34,23 +34,23 @@ export const SettingsView: React.FC = () => {
 
     useEffect(() => {
         fetchBackups();
-        // Load saved preferences
         Promise.allSettled([
-            getSetting('default', 'gross_margin'),
-            getSetting('default', 'fx_rate'),
-            getSetting('default', 'date_format'),
+            getSetting(activeWorkspaceId, 'gross_margin'),
+            getSetting(activeWorkspaceId, 'fx_rate'),
+            getSetting(activeWorkspaceId, 'date_format'),
         ]).then(([gm, fx, df]) => {
             if (gm.status === 'fulfilled') setGrossMargin((parseFloat(gm.value) * 100).toFixed(0));
             if (fx.status === 'fulfilled') setFxRate(fx.value);
             if (df.status === 'fulfilled') setDateFormat(df.value);
         });
-    }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeWorkspaceId]);
 
     const handleCreateBackup = async () => {
         try {
             setActionError(null);
             setActionSuccess(null);
-            const filename = await createBackup('default');
+            const filename = await createBackup(activeWorkspaceId);
             setActionSuccess(`Backup created: ${filename}`);
             fetchBackups();
         } catch (err: any) {
@@ -72,7 +72,7 @@ export const SettingsView: React.FC = () => {
         if (!pendingRestore) return;
         try {
             setActionError(null);
-            await confirmRestore('default', pendingRestore.filename, pendingRestore.token);
+            await confirmRestore(activeWorkspaceId, pendingRestore.filename, pendingRestore.token);
             setActionSuccess(`Restored from ${pendingRestore.filename}. Reload the app to see changes.`);
             setPendingRestore(null);
         } catch (err: any) {
@@ -92,9 +92,9 @@ export const SettingsView: React.FC = () => {
             if (!dateFormat.trim()) throw new Error('Date format cannot be empty');
 
             await Promise.all([
-                setSetting('default', 'gross_margin', (gm / 100).toString()),
-                setSetting('default', 'fx_rate', fx.toString()),
-                setSetting('default', 'date_format', dateFormat.trim()),
+                setSetting(activeWorkspaceId, 'gross_margin', (gm / 100).toString()),
+                setSetting(activeWorkspaceId, 'fx_rate', fx.toString()),
+                setSetting(activeWorkspaceId, 'date_format', dateFormat.trim()),
             ]);
             setPrefSaved(true);
             setTimeout(() => setPrefSaved(false), 3000);

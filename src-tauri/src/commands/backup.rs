@@ -21,9 +21,11 @@ impl BackupTokenStore {
 }
 
 #[tauri::command]
-pub fn backup_list(_workspace_id: String, state: State<'_, AppState>) -> Result<Vec<String>, LedgerlineError> {
-    // Assuming workspace_id is "default" for now, which maps to name "default"
-    state.backup_manager.list_backups("default").map_err(LedgerlineError::from)
+pub fn backup_list(workspace_id: String, state: State<'_, AppState>) -> Result<Vec<String>, LedgerlineError> {
+    let mgr = state.workspace_manager.lock().unwrap();
+    let workspaces = mgr.list_workspaces().map_err(LedgerlineError::from)?;
+    let ws = workspaces.iter().find(|w| w.id == workspace_id).ok_or("Workspace not found")?;
+    state.backup_manager.list_backups(&ws.name).map_err(LedgerlineError::from)
 }
 
 #[tauri::command]

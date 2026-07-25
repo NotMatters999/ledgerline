@@ -3,15 +3,16 @@ import { useFinancialsStore } from '../../store/financials';
 import { RetentionChart } from '../../charts/RetentionChart';
 import { Tooltip } from '../../components/Tooltip';
 
-export const RetentionView: React.FC = () => {
+interface Props { activeWorkspaceId: string; }
+
+export const RetentionView: React.FC<Props> = ({ activeWorkspaceId }) => {
     const { retention, isLoading, error, fetchData } = useFinancialsStore();
 
     useEffect(() => {
-        // Assume Dashboard or App fetches data, but we fetch if empty just in case
-        if (retention.length === 0) {
-            fetchData('default');
+        if (activeWorkspaceId && retention.length === 0) {
+            fetchData(activeWorkspaceId);
         }
-    }, [retention.length, fetchData]);
+    }, [activeWorkspaceId, retention.length, fetchData]);
 
     if (isLoading && retention.length === 0) {
         return (
@@ -45,34 +46,16 @@ export const RetentionView: React.FC = () => {
 
             <div className="grid-cards" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
                 {[
-                    {
-                        label: 'Net Revenue Retention',
-                        shortLabel: 'NRR',
-                        value: `${currentNrr.toFixed(1)}%`,
-                        tip: 'NRR = (Beginning MRR + Expansion + Reactivation − Contraction − Churn) ÷ Beginning MRR. >100% means existing customers grow faster than they churn.',
-                        positive: currentNrr >= 100,
-                    },
-                    {
-                        label: 'Gross Revenue Retention',
-                        shortLabel: 'GRR',
-                        value: `${currentGrr.toFixed(1)}%`,
-                        tip: 'GRR = (Beginning MRR − Contraction − Churn) ÷ Beginning MRR. Expansion excluded. Benchmark: >85% for B2B SaaS.',
-                        positive: currentGrr >= 85,
-                    },
-                    {
-                        label: 'Logo Retention',
-                        shortLabel: 'Logo',
-                        value: `${currentLogo.toFixed(1)}%`,
-                        tip: 'Customer-count retention: Ending Customers ÷ Beginning Customers. Ignores revenue weighting. Benchmark: >90% monthly.',
-                        positive: currentLogo >= 90,
-                    },
+                    { label: 'Net Revenue Retention', value: `${currentNrr.toFixed(1)}%`, tip: 'NRR = (Beginning MRR + Expansion + Reactivation − Contraction − Churn) ÷ Beginning MRR. >100% means existing customers grow faster than they churn.', positive: currentNrr >= 100 },
+                    { label: 'Gross Revenue Retention', value: `${currentGrr.toFixed(1)}%`, tip: 'GRR = (Beginning MRR − Contraction − Churn) ÷ Beginning MRR. Expansion excluded. Benchmark: >85% for B2B SaaS.', positive: currentGrr >= 85 },
+                    { label: 'Logo Retention', value: `${currentLogo.toFixed(1)}%`, tip: 'Customer-count retention: Ending Customers ÷ Beginning Customers. Ignores revenue weighting. Benchmark: >90% monthly.', positive: currentLogo >= 90 },
                 ].map(({ label, value, tip, positive }) => (
                     <div key={label} className="metric-card">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.25rem' }}>
                             <p className="card-title" style={{ margin: 0 }}>{label}</p>
                             <Tooltip text={tip} />
                         </div>
-                        <p className="card-value" style={positive !== undefined ? { color: positive ? 'var(--accent-primary)' : 'var(--status-danger)' } : {}}>
+                        <p className="card-value" style={{ color: positive ? 'var(--accent-primary)' : 'var(--status-danger)' }}>
                             {value}
                         </p>
                         <p className="text-muted" style={{ fontSize: '0.75rem', marginTop: '0.375rem' }}>Last Month</p>

@@ -4,12 +4,12 @@ import { CoreChart } from '../../charts/CoreChart';
 import { Tooltip } from '../../components/Tooltip';
 
 // Derive churn rate from retention data
-export const ChurnAnalyticsView: React.FC = () => {
+export const ChurnAnalyticsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
     const { mrr, retention, isLoading, error, fetchData } = useFinancialsStore();
 
     useEffect(() => {
-        if (mrr.length === 0) fetchData('default');
-    }, [mrr.length, fetchData]);
+        if (activeWorkspaceId && mrr.length === 0) fetchData(activeWorkspaceId);
+    }, [activeWorkspaceId, mrr.length, fetchData]);
 
     // ── Summary metrics ─────────────────────────────────────────────────────
     const latestMrr = mrr.length > 0 ? mrr[mrr.length - 1] : null;

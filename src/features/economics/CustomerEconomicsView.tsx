@@ -8,12 +8,12 @@ import { Tooltip } from '../../components/Tooltip';
  * Surface ARPA, customer count trends, expansion vs contraction, and reactivation.
  * All data derived from existing mrr_get / ltv_get store data — no new Rust commands needed.
  */
-export const CustomerEconomicsView: React.FC = () => {
+export const CustomerEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
     const { mrr, ltv, isLoading, error, fetchData } = useFinancialsStore();
 
     useEffect(() => {
-        if (mrr.length === 0) fetchData('default');
-    }, [mrr.length, fetchData]);
+        if (activeWorkspaceId && mrr.length === 0) fetchData(activeWorkspaceId);
+    }, [activeWorkspaceId, mrr.length, fetchData]);
 
     const latest = mrr.length > 0 ? mrr[mrr.length - 1] : null;
     const latestLtv = ltv.length > 0 ? ltv[ltv.length - 1] : null;

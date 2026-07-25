@@ -4,13 +4,16 @@ import { MetricCard } from './MetricCard';
 import { MrrChart } from './MrrChart';
 import { RetentionChart } from '../../charts/RetentionChart';
 
-export const Dashboard: React.FC = () => {
+interface Props { activeWorkspaceId: string; }
+
+export const Dashboard: React.FC<Props> = ({ activeWorkspaceId }) => {
     const { mrr, arr, retention, isLoading, error, fetchData } = useFinancialsStore();
 
     useEffect(() => {
-        // Use default workspace 'default' for now, or fetch from workspace manager state
-        fetchData('default');
-    }, [fetchData]);
+        if (activeWorkspaceId && mrr.length === 0) {
+            fetchData(activeWorkspaceId);
+        }
+    }, [activeWorkspaceId, mrr.length, fetchData]);
 
     if (isLoading) {
         return (
@@ -36,7 +39,7 @@ export const Dashboard: React.FC = () => {
     const currentCustomers = mrr.length > 0 ? mrr[mrr.length - 1].ending_customers : 0;
     const currentNrr = retention.length > 0 ? retention[retention.length - 1].nrr * 100 : 0;
 
-    const formatCurrency = (val: number) => 
+    const formatCurrency = (val: number) =>
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
 
     return (
@@ -47,25 +50,10 @@ export const Dashboard: React.FC = () => {
             </header>
 
             <div className="grid-cards">
-                <MetricCard 
-                    title="Current ARR" 
-                    value={formatCurrency(currentArr)} 
-                    trend={12.5} 
-                />
-                <MetricCard 
-                    title="Current MRR" 
-                    value={formatCurrency(currentMrr)} 
-                    trend={4.2} 
-                />
-                <MetricCard 
-                    title="Active Customers" 
-                    value={currentCustomers.toString()} 
-                />
-                <MetricCard 
-                    title="Net Revenue Retention (NRR)" 
-                    value={`${currentNrr.toFixed(1)}%`} 
-                    subtitle="Last Month"
-                />
+                <MetricCard title="Current ARR"  value={formatCurrency(currentArr)} trend={12.5} />
+                <MetricCard title="Current MRR"  value={formatCurrency(currentMrr)} trend={4.2} />
+                <MetricCard title="Active Customers" value={currentCustomers.toString()} />
+                <MetricCard title="Net Revenue Retention (NRR)" value={`${currentNrr.toFixed(1)}%`} subtitle="Last Month" />
             </div>
 
             <div className="grid-charts">
