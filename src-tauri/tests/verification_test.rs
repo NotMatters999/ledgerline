@@ -16,7 +16,6 @@ use std::time::Instant;
 #[test]
 fn test_fix2_validation_engine() {
     let today = chrono::Utc::now().naive_utc().date().format("%Y-%m-%d").to_string();
-    let future = (chrono::Utc::now().naive_utc().date() + chrono::Duration::days(1)).format("%Y-%m-%d").to_string();
 
     assert_eq!(validate_row(1, "c1", &today, -10.0, "USD", "Standard").unwrap_err().reason, "Negative MRR amounts are not allowed (unconditionally rejected)");
     assert_eq!(validate_row(1, "c1", &today, f64::NAN, "USD", "Standard").unwrap_err().reason, "Amount is NaN or Infinity");
