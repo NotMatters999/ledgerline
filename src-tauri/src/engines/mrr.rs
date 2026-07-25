@@ -97,9 +97,8 @@ pub fn calculate_mrr(conn: &Connection) -> Result<Vec<MrrMovement>, duckdb::Erro
                         let diff_years = month.year() - last_active.year();
                         let diff_months = diff_years * 12 + month.month() as i32 - last_active.month() as i32;
                         
-                        // If diff_months <= 1, they were active last month (Dec to Jan).
-                        // If diff_months >= 2, they skipped at least one month (e.g. Dec to Feb), so it's a Reactivation.
-                        if diff_months <= 1 {
+                        // If diff_months is 2, it means 1 full calendar month gap (e.g. Dec to Feb)
+                        if diff_months <= 2 {
                             movement.expansion += curr;
                             movement.new_customers += 1; // Need to add logo back since it was removed during churn
                         } else {
@@ -120,6 +119,7 @@ pub fn calculate_mrr(conn: &Connection) -> Result<Vec<MrrMovement>, duckdb::Erro
             } else if prev > 0.0 {
                 movement.churn += prev; 
                 movement.churned_customers += 1;
+                last_active_month.insert(cust.clone(), month);
             }
             
             if prev > 0.0 {
