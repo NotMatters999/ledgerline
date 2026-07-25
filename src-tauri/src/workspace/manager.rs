@@ -1,10 +1,23 @@
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
-use std::fs;
 use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
+
+fn remove_duckdb_wal(path: &Path) {
+    let candidates = [
+        path.with_extension("duckdb.wal"),
+        path.with_extension("duckdb-wal"),
+    ];
+
+    for wal in candidates {
+        if wal.exists() {
+            let _ = fs::remove_file(wal);
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Workspace {
@@ -172,11 +185,8 @@ impl WorkspaceManager {
         
         if ws.db_path.exists() {
             let _ = fs::remove_file(&ws.db_path);
-            let wal = ws.db_path.with_extension("duckdb.wal");
-            if wal.exists() {
-                let _ = fs::remove_file(wal);
-            }
         }
+        remove_duckdb_wal(&ws.db_path);
         
         Ok(())
     }
@@ -231,6 +241,30 @@ mod tests {
         let list = manager.list_workspaces().unwrap();
         assert_eq!(list.len(), 0);
         
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_confirm_delete_removes_duckdb_wal_files() {
+        let dir = get_test_dir();
+        let manager = WorkspaceManager::new(&dir).unwrap();
+        let ws = manager.create_workspace("Test WAL Cleanup").unwrap();
+
+        // Create a dummy database and WAL variants.
+        let _ = fs::create_dir_all(ws.db_path.parent().unwrap());
+        fs::write(&ws.db_path, "dummy").unwrap();
+        let wal1 = ws.db_path.with_extension("duckdb.wal");
+        let wal2 = ws.db_path.with_extension("duckdb-wal");
+        fs::write(&wal1, "wal").unwrap();
+        fs::write(&wal2, "wal").unwrap();
+
+        let token = manager.request_delete(&ws.id).unwrap();
+        manager.confirm_delete(&token).unwrap();
+
+        assert!(!ws.db_path.exists(), "Workspace DB file should be removed");
+        assert!(!wal1.exists(), "DuckDB WAL (duckdb.wal) should be removed");
+        assert!(!wal2.exists(), "DuckDB WAL (duckdb-wal) should be removed");
+
         let _ = fs::remove_dir_all(&dir);
     }
 }

@@ -1,7 +1,20 @@
-use std::path::{Path, PathBuf};
 use std::fs;
+use std::path::{Path, PathBuf};
 use chrono::Utc;
 use super::manager::WorkspaceError;
+
+fn remove_duckdb_wal(path: &Path) {
+    let candidates = [
+        path.with_extension("duckdb.wal"),
+        path.with_extension("duckdb-wal"),
+    ];
+
+    for wal in candidates {
+        if wal.exists() {
+            let _ = fs::remove_file(wal);
+        }
+    }
+}
 
 pub struct BackupManager {
     pub app_data_dir: PathBuf,
@@ -70,13 +83,49 @@ impl BackupManager {
     }
 
     pub fn restore(&self, backup_path: &Path, target_db_path: &Path) -> Result<(), WorkspaceError> {
-        // Delete WAL before restoring to prevent corruption
-        let wal = target_db_path.with_extension("duckdb.wal");
-        if wal.exists() {
-            let _ = fs::remove_file(wal);
+        // Delete any stale WAL files before restoring to avoid DuckDB replay issues.
+        remove_duckdb_wal(target_db_path);
+
+        if target_db_path.exists() {
+            let _ = fs::remove_file(target_db_path);
         }
-        
+
         fs::copy(backup_path, target_db_path)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::PathBuf;
+
+    fn get_test_dir() -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("ledgerline_backup_test_{}", Utc::now().timestamp_nanos()));
+        let _ = fs::remove_dir_all(&dir);
+        dir
+    }
+
+    #[test]
+    fn test_restore_cleans_up_duckdb_wal_files() {
+        let dir = get_test_dir();
+        fs::create_dir_all(&dir).unwrap();
+
+        let source_db = dir.join("source.duckdb");
+        let target_db = dir.join("target.duckdb");
+        fs::write(&source_db, "db").unwrap();
+        fs::write(&target_db, "old").unwrap();
+        fs::write(target_db.with_extension("duckdb.wal"), "wal").unwrap();
+        fs::write(target_db.with_extension("duckdb-wal"), "wal").unwrap();
+
+        let manager = BackupManager::new(&dir);
+        manager.restore(&source_db, &target_db).unwrap();
+
+        assert!(target_db.exists());
+        assert!(!target_db.with_extension("duckdb.wal").exists());
+        assert!(!target_db.with_extension("duckdb-wal").exists());
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }
