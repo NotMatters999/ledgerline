@@ -17,7 +17,7 @@ interface WorkspaceState {
     switchTo: (id: string) => Promise<void>;
 }
 
-export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
+export const useWorkspaceStore = create<WorkspaceState>((set) => ({
     workspaces: [],
     activeId: '',
     isLoading: false,
