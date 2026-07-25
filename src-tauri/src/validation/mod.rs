@@ -29,14 +29,6 @@ pub fn validate_row(
         });
     }
 
-    // Example category validation: block purely empty categories if they were mapped
-    if category.trim().is_empty() {
-        return Err(ValidationError {
-            row_number,
-            reason: "Invalid/Empty category".to_string(),
-        });
-    }
-
     if amount.is_nan() || amount.is_infinite() {
         return Err(ValidationError {
             row_number,
@@ -57,14 +49,6 @@ pub fn validate_row(
             reason: format!("Invalid date format (expected YYYY-MM-DD): {}", date_str),
         }
     })?;
-
-    let today = Utc::now().date_naive();
-    if parsed_date > today {
-        return Err(ValidationError {
-            row_number,
-            reason: "Future dates are not allowed".to_string(),
-        });
-    }
 
     Ok(())
 }

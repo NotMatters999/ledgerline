@@ -116,7 +116,7 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
 
             <div className="grid-cards">
                 {[
-                    { label: 'Customer LTV', value: formatCurrency(currentLtv), tip: 'Lifetime Value = ARPA × Gross Margin ÷ Churn Rate. Estimates total revenue from an average customer over their lifetime.' },
+                    { label: 'Customer LTV', value: !isFinite(currentLtv) ? 'Very High' : formatCurrency(currentLtv), tip: 'Lifetime Value = ARPA × Gross Margin ÷ Churn Rate. Estimates total revenue from an average customer over their lifetime.' },
                     { label: 'Customer CAC', value: formatCurrency(currentCac), tip: 'Customer Acquisition Cost = Marketing Spend ÷ New Customers acquired that month.' },
                     { label: 'LTV:CAC Ratio', value: `${currentRatio.toFixed(1)}x`, tip: 'Benchmark: >3× is healthy for B2B SaaS. Below 1× means you spend more to acquire than you recover.' },
                     { label: 'Payback Period', value: `${currentPayback.toFixed(1)} mo`, tip: 'Months to recover CAC from gross margin. Benchmark: <12 months for efficient SaaS growth.' },
