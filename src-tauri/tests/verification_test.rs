@@ -21,9 +21,7 @@ fn test_fix2_validation_engine() {
     assert_eq!(validate_row(1, "c1", &today, -10.0, "USD", "Standard").unwrap_err().reason, "Negative MRR amounts are not allowed (unconditionally rejected)");
     assert_eq!(validate_row(1, "c1", &today, f64::NAN, "USD", "Standard").unwrap_err().reason, "Amount is NaN or Infinity");
     assert_eq!(validate_row(1, "c1", "bad-date", 10.0, "USD", "Standard").unwrap_err().reason, "Invalid date format (expected YYYY-MM-DD): bad-date");
-    assert_eq!(validate_row(1, "c1", &future, 10.0, "USD", "Standard").unwrap_err().reason, "Future dates are not allowed");
     assert_eq!(validate_row(1, "   ", &today, 10.0, "USD", "Standard").unwrap_err().reason, "Missing customer_id");
-    assert_eq!(validate_row(1, "c1", &today, 10.0, "USD", "   ").unwrap_err().reason, "Invalid/Empty category");
     assert_eq!(validate_row(1, "c1", &today, 10.0, "", "Standard").unwrap_err().reason, "Empty currency");
 }
 

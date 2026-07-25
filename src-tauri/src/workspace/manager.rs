@@ -55,22 +55,19 @@ impl WorkspaceManager {
             fs::create_dir_all(&workspaces_dir)?;
         }
 
-        let mut is_new = false;
-        if !workspaces_json_path.exists() {
-            let empty: Vec<Workspace> = Vec::new();
-            let json = serde_json::to_string_pretty(&empty)?;
-            fs::write(&workspaces_json_path, json)?;
-            is_new = true;
-        }
-
         let mgr = Self {
             workspaces_json_path,
             workspaces_dir,
             delete_tokens: Mutex::new(HashMap::new()),
         };
 
-        if is_new {
-            let _ = mgr.create_workspace("Default");
+        if !mgr.workspaces_json_path.exists() {
+            let empty: Vec<Workspace> = Vec::new();
+            let json = serde_json::to_string_pretty(&empty)?;
+            fs::write(&mgr.workspaces_json_path, json)?;
+            
+            // Auto-create a default workspace so the app is never entirely empty
+            let _ = mgr.create_workspace("Default Workspace");
         }
 
         Ok(mgr)

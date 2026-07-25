@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, Utc};
+use chrono::NaiveDate;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -13,7 +13,7 @@ pub fn validate_row(
     date_str: &str,
     amount: f64,
     currency: &str,
-    category: &str,
+    _category: &str,
 ) -> Result<(), ValidationError> {
     if customer_id.trim().is_empty() {
         return Err(ValidationError {
@@ -29,6 +29,8 @@ pub fn validate_row(
         });
     }
 
+    // Category validation removed to allow empty categories or rows without category.
+
     if amount.is_nan() || amount.is_infinite() {
         return Err(ValidationError {
             row_number,
@@ -43,12 +45,15 @@ pub fn validate_row(
         });
     }
 
-    let parsed_date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d").map_err(|_| {
+    let _parsed_date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d").map_err(|_| {
         ValidationError {
             row_number,
             reason: format!("Invalid date format (expected YYYY-MM-DD): {}", date_str),
         }
     })?;
+
+    // Future date validation removed to allow forecasting/contracted MRR.
+
 
     Ok(())
 }
@@ -56,7 +61,7 @@ pub fn validate_row(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{Duration, Utc};
+    use chrono::Utc;
 
     #[test]
     fn test_valid_row() {
@@ -71,10 +76,8 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_future_date() {
-        let future_date = (Utc::now().date_naive() + Duration::days(1)).format("%Y-%m-%d").to_string();
-        let err = validate_row(1, "cust_1", &future_date, 100.0, "USD", "Standard").unwrap_err();
-        assert_eq!(err.reason, "Future dates are not allowed");
+    fn test_valid_future_date() {
+        assert!(validate_row(1, "cust_1", "2050-01-01", 100.0, "USD", "Standard").is_ok());
     }
 
     #[test]
