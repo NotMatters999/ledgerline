@@ -216,7 +216,7 @@ fn test_fix3_export_system_validity() {
         csv_content.contains("month") || csv_content.contains("ending") || csv_content.contains("new"),
         "CSV must contain MRR field headers, got: {}", csv_content
     );
-    assert!(csv_content.len() > 0, "CSV must be non-empty");
+    assert!(!csv_content.is_empty(), "CSV must be non-empty");
 
     // PDF: call generate_pdf (pure logic, no Tauri State)
     // arial.ttf is embedded at compile-time via include_bytes! in export.rs
