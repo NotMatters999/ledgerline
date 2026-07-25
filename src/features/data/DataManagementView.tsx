@@ -8,6 +8,8 @@ import {
     MrrLogAddPayload,
 } from '../../lib/ipc/data';
 import { useFinancialsStore } from '../../store/financials';
+import { ImportButton } from '../import/ImportButton';
+import { ExportButton } from '../export/ExportButton';
 
 const PAGE_SIZE = 50;
 
@@ -152,13 +154,17 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                         borderRadius: '0.5rem', padding: '0.5rem 0.75rem', color: 'var(--text-primary)', fontSize: '0.875rem'
                     }}
                 />
-                <button
-                    className="nav-item active"
-                    onClick={() => setShowAddForm(v => !v)}
-                    style={{ padding: '0.5rem 1.25rem', borderRadius: '0.5rem' }}
-                >
-                    + Add Row
-                </button>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                    <ImportButton activeWorkspaceId={activeWorkspaceId} />
+                    <ExportButton activeWorkspaceId={activeWorkspaceId} />
+                    <button
+                        className="nav-item active"
+                        onClick={() => setShowAddForm(v => !v)}
+                        style={{ padding: '0.5rem 1.25rem', borderRadius: '0.5rem' }}
+                    >
+                        + Add Row
+                    </button>
+                </div>
             </div>
 
             {/* Add Row Form */}
@@ -258,7 +264,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                         {isLoading ? (
                             <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading…</td></tr>
                         ) : rows.length === 0 ? (
-                            <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No records found{search ? ' matching your search' : '. Import data to get started.'}</td></tr>
+                            <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No records found{search ? ' matching your search' : '. Import CSV or Excel data to get started.'}</td></tr>
                         ) : rows.map(row => (
                             <tr
                                 key={row.rowid}

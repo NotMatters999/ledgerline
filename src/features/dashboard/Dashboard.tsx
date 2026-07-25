@@ -49,17 +49,26 @@ export const Dashboard: React.FC<Props> = ({ activeWorkspaceId }) => {
                 <p className="page-subtitle">Real-time SaaS metrics and retention analytics.</p>
             </header>
 
-            <div className="grid-cards">
-                <MetricCard title="Current ARR"  value={formatCurrency(currentArr)} trend={12.5} />
-                <MetricCard title="Current MRR"  value={formatCurrency(currentMrr)} trend={4.2} />
-                <MetricCard title="Active Customers" value={currentCustomers.toString()} />
-                <MetricCard title="Net Revenue Retention (NRR)" value={`${currentNrr.toFixed(1)}%`} subtitle="Last Month" />
-            </div>
+            {mrr.length === 0 ? (
+                <div className="flex-center" style={{ height: '300px', flexDirection: 'column', gap: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '1rem', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                    <p className="text-muted">No data available in this workspace.</p>
+                    <p className="text-secondary">Navigate to the Data tab to import your CSV or Excel files.</p>
+                </div>
+            ) : (
+                <>
+                    <div className="grid-cards">
+                        <MetricCard title="Current ARR"  value={formatCurrency(currentArr)} trend={12.5} />
+                        <MetricCard title="Current MRR"  value={formatCurrency(currentMrr)} trend={4.2} />
+                        <MetricCard title="Active Customers" value={currentCustomers.toString()} />
+                        <MetricCard title="Net Revenue Retention (NRR)" value={`${currentNrr.toFixed(1)}%`} subtitle="Last Month" />
+                    </div>
 
-            <div className="grid-charts">
-                <MrrChart data={mrr} />
-                <RetentionChart data={retention} />
-            </div>
+                    <div className="grid-charts">
+                        <MrrChart data={mrr} />
+                        <RetentionChart data={retention} />
+                    </div>
+                </>
+            )}
         </div>
     );
 };
