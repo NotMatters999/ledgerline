@@ -19,7 +19,7 @@ MRR is computed dynamically by summing active, recognized revenue for a given mo
 - **Expansion MRR**: Customer pays more than the previous month.
 - **Contraction MRR**: Customer pays less than the previous month, but > $0.
 - **Churn MRR**: Customer pays $0 after previously paying > $0.
-- **Reactivation MRR**: Customer pays > $0 after skipping two or more full calendar months (a return after only one skipped month counts as Expansion).
+- **Reactivation MRR**: Customer pays > $0 after skipping one or more full calendar months.
 
 ### Retention
 - **Gross Retention Rate (GRR)**: \`(Beginning MRR - Contraction - Churn) / Beginning MRR\`
@@ -58,11 +58,11 @@ LedgerLine requires a strict CSV schema to build the DuckDB ledger.
 ### Required Columns
 - \`customer_id\` (String): A unique identifier for the customer.
 - \`period\` (Date): The billing month, formatted as \`YYYY-MM-DD\`. It is highly recommended to use the 1st of the month.
-- \`mrr\` (Double): The recognized recurring revenue for that month (aliases: revenue, amount, subscription).
-- \`currency\` (String): e.g., \`USD\` (aliases: curr, iso, currency_code).
-- \`category\` (String, Optional): Plan or tier (aliases: plan, tier, product, subscription_type).
+- \`mrr\`, \`revenue\`, \`amount\`, or \`subscription\` (Double): The recognized recurring revenue for that month.
+- \`currency\`, \`curr\`, \`iso\`, or \`currency_code\` (String): e.g., \`USD\`.
+- \`category\`, \`plan\`, \`tier\`, \`product\`, or \`subscription_type\` (String): The plan name.
 
-> **Note**: LedgerLine stores the exact dates but dynamically normalizes them to the 1st of the month during calculations to ensure consistent Cohort grouping.
+> **Note**: LedgerLine automatically groups dates by month during calculation to ensure consistent Cohort grouping.
         `
     },
     {

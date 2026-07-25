@@ -98,10 +98,12 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
     const currentPayback = payback.length > 0 ? payback[payback.length - 1].payback_months : 0;
     const currentRatio = currentCac > 0 ? currentLtv / currentCac : 0;
 
-    const formatCurrency = (val: number) => {
-        if (!isFinite(val)) return 'Very High';
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
-    };
+    const formatCurrency = (val: number) => 
+        new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+
+    const ltvDisplay = !isFinite(currentLtv) || isNaN(currentLtv) ? 'Very High' : formatCurrency(currentLtv);
+    const paybackDisplay = !isFinite(currentPayback) || isNaN(currentPayback) ? 'N/A' : `${currentPayback.toFixed(1)} mo`;
+    const ratioDisplay = !isFinite(currentRatio) || isNaN(currentRatio) ? 'N/A' : `${currentRatio.toFixed(1)}x`;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -118,10 +120,10 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
 
             <div className="grid-cards">
                 {[
-                    { label: 'Customer LTV', value: formatCurrency(currentLtv), tip: 'Lifetime Value = ARPA × Gross Margin ÷ Churn Rate. Estimates total revenue from an average customer over their lifetime.' },
+                    { label: 'Customer LTV', value: ltvDisplay, tip: 'Lifetime Value = ARPA × Gross Margin ÷ Churn Rate. Estimates total revenue from an average customer over their lifetime.' },
                     { label: 'Customer CAC', value: formatCurrency(currentCac), tip: 'Customer Acquisition Cost = Marketing Spend ÷ New Customers acquired that month.' },
-                    { label: 'LTV:CAC Ratio', value: `${currentRatio.toFixed(1)}x`, tip: 'Benchmark: >3× is healthy for B2B SaaS. Below 1× means you spend more to acquire than you recover.' },
-                    { label: 'Payback Period', value: `${currentPayback.toFixed(1)} mo`, tip: 'Months to recover CAC from gross margin. Benchmark: <12 months for efficient SaaS growth.' },
+                    { label: 'LTV:CAC Ratio', value: ratioDisplay, tip: 'Benchmark: >3× is healthy for B2B SaaS. Below 1× means you spend more to acquire than you recover.' },
+                    { label: 'Payback Period', value: paybackDisplay, tip: 'Months to recover CAC from gross margin. Benchmark: <12 months for efficient SaaS growth.' },
                 ].map(({ label, value, tip }) => (
                     <div key={label} className="metric-card">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.25rem' }}>
