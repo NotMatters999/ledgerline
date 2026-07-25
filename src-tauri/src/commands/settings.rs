@@ -15,7 +15,7 @@ pub fn setting_set(_workspace_id: String, key: String, value: String, state: Sta
     // Validation
     if key == "gross_margin" {
         if let Ok(v) = value.parse::<f64>() {
-            if v < 0.0 || v > 1.0 {
+            if !(0.0..=1.0).contains(&v) {
                 return Err("Gross margin must be between 0.0 and 1.0 (e.g. 0.85 for 85%)".into());
             }
         } else {
@@ -148,13 +148,13 @@ mod tests {
 
         // 3. Marketing Spend and Payback
         // Payback = CAC / (ARPA * margin)
-        conn.execute("INSERT INTO monthly_assumptions (month, marketing_spend) VALUES ('2024-03', 500.0)").unwrap();
+        conn.execute("INSERT INTO monthly_assumptions (month, marketing_spend) VALUES ('2024-03', 500.0)", []).unwrap();
         
         // Wait, Payback engine CAC calculation for March:
         // Spends in March: 500. New customers in March: 0? 
         // In our setup, no new customers in March. CAC is 0. Payback will be 0.
         // Let's add a new customer in March so CAC is computed.
-        conn.execute("INSERT INTO mrr_log VALUES ('D', '2024-03-01', 50.0, 'USD')").unwrap();
+        conn.execute("INSERT INTO mrr_log VALUES ('D', '2024-03-01', 50.0, 'USD')", []).unwrap();
 
         let payback = calculate_payback(&conn).unwrap();
         let mar_payback = &payback[1];

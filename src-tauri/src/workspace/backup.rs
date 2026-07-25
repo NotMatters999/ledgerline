@@ -28,7 +28,7 @@ impl BackupManager {
             let mut files: Vec<PathBuf> = entries
                 .filter_map(Result::ok)
                 .map(|e| e.path())
-                .filter(|p| p.is_file() && p.extension().map_or(false, |ext| ext == "bak"))
+                .filter(|p| p.is_file() && p.extension().is_some_and(|ext| ext == "bak"))
                 .collect();
             
             // Sort by modification time, newest first
@@ -57,7 +57,7 @@ impl BackupManager {
         if let Ok(entries) = fs::read_dir(&backups_dir) {
             for entry in entries.filter_map(Result::ok) {
                 let path = entry.path();
-                if path.is_file() && path.extension().map_or(false, |ext| ext == "bak") {
+                if path.is_file() && path.extension().is_some_and(|ext| ext == "bak") {
                     if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                         files.push(name.to_string());
                     }

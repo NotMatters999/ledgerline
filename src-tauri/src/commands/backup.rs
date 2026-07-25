@@ -7,6 +7,7 @@ use crate::utils::error::LedgerlineError;
 use crate::utils::logger::log_info;
 
 // Basic in-memory store for confirmation tokens
+#[derive(Default)]
 pub struct BackupTokenStore {
     pub tokens: Mutex<HashMap<String, String>>, // filename -> token
 }
@@ -81,8 +82,6 @@ pub fn backup_restore_confirm(_workspace_id: String, filename: String, token: St
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::fs;
     use crate::workspace::manager::WorkspaceManager;
     use crate::workspace::backup::BackupManager;
     use tempfile::tempdir;

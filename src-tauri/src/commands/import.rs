@@ -26,7 +26,7 @@ pub fn import_commit(workspace_id: String, file_path: String, state: State<'_, A
     // This synchronously copies the .duckdb file (usually <100MB, taking ~5-50ms on modern SSDs).
     if let Err(e) = state.backup_manager.backup(&db_path, &ws_name) {
         // If backup fails, we abort the import to prevent unsafe mutation without a rollback net
-        return Err(LedgerlineError::from(ImportError::Parser(crate::import::parser::ParserError::Io(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to create safety snapshot: {}", e))))));
+        return Err(LedgerlineError::from(ImportError::Parser(crate::import::parser::ParserError::Io(std::io::Error::other(format!("Failed to create safety snapshot: {}", e))))));
     }
 
     let mut conn = open_connection(&db_path).map_err(LedgerlineError::from)?;
@@ -39,7 +39,6 @@ pub fn import_commit(workspace_id: String, file_path: String, state: State<'_, A
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::fs;
     use std::time::Instant;
     use tempfile::tempdir;
