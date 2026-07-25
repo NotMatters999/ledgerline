@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+
+# Early Access features
+early_access: true
+
+reviews:
+  # Review profile: "chill", "informative", or "assertive"
+  profile: "informative"
+  
+  # Set to true to get a high-level summary of the PR
+  high_level_summary: true
+  
+  # A fun poem generated about the PR
+  poem: true
+  
+  # Automatically review all PRs
+  request_review_for_all_prs: true
+
+  # Path filters - ignore auto-generated or vendored files
+  path_filters:
+    - "!node_modules/**"
+    - "!dist/**"
+    - "!src-tauri/target/**"
+    - "**.rs"
+    - "**.ts"
+    - "**.tsx"
+    - "**.css"
+    - "**.html"
+
+  # Path-specific instructions tailored to Tauri + React + Rust
+  path_instructions:
+    - path: "src-tauri/**/*.rs"
+      instructions: |
+        Ensure that Tauri commands are properly returning `Result<T, String>` for frontend error handling.
+        Check that database connections are handled safely and errors are propagated correctly.
+    - path: "src/**/*.tsx"
+      instructions: |
+        Ensure React components follow the project's styling using standard CSS classes (not Tailwind).
+        Verify that IPC calls to the Tauri backend are correctly typed and handle errors gracefully.
+
+chat:
+  auto_reply: true
