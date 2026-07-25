@@ -22,7 +22,7 @@ const MIGRATIONS: &[Migration] = &[
 pub fn run_migrations(conn: &mut Connection) -> Result<()> {
     // Check if schema_version exists
     let mut stmt = conn.prepare(
-        "SELECT count(*) FROM information_schema.tables WHERE table_name = 'schema_version'"
+        "SELECT count(*) FROM information_schema.tables WHERE LOWER(table_name) = 'schema_version'"
     )?;
     
     let table_exists: i64 = stmt.query_row([], |row| row.get(0))?;
