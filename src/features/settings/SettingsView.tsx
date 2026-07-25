@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { listBackups, createBackup, requestRestore, confirmRestore } from '../../lib/ipc/backup';
 import { getSetting, setSetting } from '../../lib/ipc/settings';
 
@@ -20,6 +20,7 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
     const [dateFormat, setDateFormat] = useState('YYYY-MM-DD');
     const [prefSaved, setPrefSaved] = useState(false);
     const [prefError, setPrefError] = useState<string | null>(null);
+    const prefSaveTimer = useRef<number | null>(null);
 
     const fetchBackups = async () => {
         try {
@@ -32,19 +33,28 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
         }
     };
 
-    useEffect(() => {
-        fetchBackups();
-        Promise.allSettled([
+    const loadPreferences = useCallback(async () => {
+        const [gm, fx, df] = await Promise.allSettled([
             getSetting(activeWorkspaceId, 'gross_margin'),
             getSetting(activeWorkspaceId, 'fx_rate'),
             getSetting(activeWorkspaceId, 'date_format'),
-        ]).then(([gm, fx, df]) => {
-            if (gm.status === 'fulfilled') setGrossMargin((parseFloat(gm.value) * 100).toFixed(0));
-            if (fx.status === 'fulfilled') setFxRate(fx.value);
-            if (df.status === 'fulfilled') setDateFormat(df.value);
-        });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        ]);
+
+        if (gm.status === 'fulfilled') setGrossMargin((parseFloat(gm.value) * 100).toFixed(0));
+        if (fx.status === 'fulfilled') setFxRate(fx.value);
+        if (df.status === 'fulfilled') setDateFormat(df.value);
     }, [activeWorkspaceId]);
+
+    useEffect(() => {
+        fetchBackups();
+        loadPreferences();
+
+        return () => {
+            if (prefSaveTimer.current) {
+                window.clearTimeout(prefSaveTimer.current);
+            }
+        };
+    }, [activeWorkspaceId, loadPreferences]);
 
     const handleCreateBackup = async () => {
         try {
@@ -97,7 +107,8 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
                 setSetting(activeWorkspaceId, 'date_format', dateFormat.trim()),
             ]);
             setPrefSaved(true);
-            setTimeout(() => setPrefSaved(false), 3000);
+            if (prefSaveTimer.current) window.clearTimeout(prefSaveTimer.current);
+            prefSaveTimer.current = window.setTimeout(() => setPrefSaved(false), 3000);
         } catch (e: any) {
             setPrefError(e?.message ?? e?.toString());
         }

@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { exportCsv, exportPdf, downloadBlob } from '../../lib/ipc/export';
 
-export const ExportButton: React.FC = () => {
+interface Props {
+    activeWorkspaceId: string;
+}
+
+export const ExportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
     const [isExporting, setIsExporting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -9,7 +13,7 @@ export const ExportButton: React.FC = () => {
         setIsExporting(true);
         setError(null);
         try {
-            const data = await exportCsv('default');
+            const data = await exportCsv(activeWorkspaceId);
             // Download as 3 separate files or just combine them?
             // A combined CSV with clear section headers is usually easiest for a single download
             const combined = `--- MRR LOG ---\n${data.mrr_csv}\n\n--- RETENTION LOG ---\n${data.retention_csv}\n\n--- COHORTS LOG ---\n${data.cohorts_csv}`;
@@ -25,7 +29,7 @@ export const ExportButton: React.FC = () => {
         setIsExporting(true);
         setError(null);
         try {
-            const data = await exportPdf('default');
+            const data = await exportPdf(activeWorkspaceId);
             // Convert Array of numbers to Uint8Array for Blob
             const u8 = new Uint8Array(data);
             downloadBlob(u8, 'ledgerline_report.pdf', 'application/pdf');
@@ -40,7 +44,7 @@ export const ExportButton: React.FC = () => {
         <div style={{ position: 'relative' }} className="export-dropdown-container">
             <button 
                 className="btn-primary"
-                disabled={isExporting}
+                disabled={!activeWorkspaceId || isExporting}
                 style={{ padding: '0.375rem 1rem' }}
             >
                 {isExporting ? 'Exporting...' : 'Export Data'}
@@ -58,26 +62,28 @@ export const ExportButton: React.FC = () => {
             >
                 <button 
                     onClick={handleCsvExport}
+                    disabled={!activeWorkspaceId || isExporting}
                     style={{
                         width: '100%', textAlign: 'left', padding: '0.75rem 1rem', fontSize: '0.875rem',
                         color: 'var(--text-primary)', background: 'transparent', border: 'none',
                         borderTopLeftRadius: '0.5rem', borderTopRightRadius: '0.5rem', cursor: 'pointer',
                         borderBottom: '1px solid rgba(255,255,255,0.05)'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+                    onMouseLeave={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = 'transparent'; }}
                 >
                     Export as CSV
                 </button>
                 <button 
                     onClick={handlePdfExport}
+                    disabled={!activeWorkspaceId || isExporting}
                     style={{
                         width: '100%', textAlign: 'left', padding: '0.75rem 1rem', fontSize: '0.875rem',
                         color: 'var(--text-primary)', background: 'transparent', border: 'none',
                         borderBottomLeftRadius: '0.5rem', borderBottomRightRadius: '0.5rem', cursor: 'pointer'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+                    onMouseLeave={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = 'transparent'; }}
                 >
                     Export as PDF
                 </button>
