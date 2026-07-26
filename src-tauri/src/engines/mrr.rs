@@ -119,7 +119,10 @@ pub fn calculate_mrr(conn: &Connection) -> Result<Vec<MrrMovement>, duckdb::Erro
             } else if prev > 0.0 {
                 movement.churn += prev; 
                 movement.churned_customers += 1;
-                last_active_month.insert(cust.clone(), month);
+                // Do NOT update `last_active_month` to the churn month here.
+                // `last_active_month` should represent the last month the customer
+                // had positive MRR. Overwriting it on churn causes reactivation
+                // detection to see a shorter absence than intended.
             }
             
             if prev > 0.0 {
