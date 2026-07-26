@@ -128,10 +128,8 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
             Some(d) => d,
             None => {
                 validation_errors.push(ValidationError {
-                    row_index: (i + 1) as i32,
-                    customer_id: customer.clone(),
-                    field: "date".to_string(),
-                    message: format!("Invalid date format: {}", date_str),
+                    row_number: i + 1,
+                    reason: format!("Invalid date format: {}", date_str),
                 });
                 continue;
             }
@@ -141,10 +139,8 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
             Ok(a) => a,
             Err(e) => {
                 validation_errors.push(ValidationError {
-                    row_index: (i + 1) as i32,
-                    customer_id: customer.clone(),
-                    field: "amount".to_string(),
-                    message: format!("Invalid amount: {}", e),
+                    row_number: i + 1,
+                    reason: format!("Invalid amount: {}", e),
                 });
                 continue;
             }
