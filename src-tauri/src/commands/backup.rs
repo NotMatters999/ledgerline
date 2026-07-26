@@ -43,10 +43,15 @@ pub fn backup_create(_workspace_id: String, state: State<'_, AppState>) -> Resul
 
 #[tauri::command]
 pub fn backup_restore_request(workspace_id: String, filename: String, token_store: State<'_, BackupTokenStore>) -> Result<String, LedgerlineError> {
-    log_info("Backup", &format!("Restore request initiated for {} in workspace {}", filename, workspace_id));
+    let safe_filename = std::path::Path::new(&filename)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or(LedgerlineError::from("Invalid or malicious backup filename"))?;
+        
+    log_info("Backup", &format!("Restore request initiated for {} in workspace {}", safe_filename, workspace_id));
     let token = Uuid::new_v4().to_string();
     let mut store = token_store.tokens.lock().unwrap();
-    store.insert(format!("{}::{}", workspace_id, filename), token.clone());
+    store.insert(format!("{}::{}", workspace_id, safe_filename), token.clone());
     Ok(token)
 }
 
@@ -70,7 +75,12 @@ pub fn backup_restore_confirm(_workspace_id: String, filename: String, token: St
     let workspaces = mgr.list_workspaces().map_err(LedgerlineError::from)?;
     let ws = workspaces.iter().find(|w| w.id == _workspace_id).ok_or("Workspace not found")?;
     
-    let backup_path = state.backup_manager.app_data_dir.join("backups").join(&ws.id).join(&filename);
+    let safe_filename = std::path::Path::new(&filename)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or(LedgerlineError::from("Invalid or malicious backup filename"))?;
+        
+    let backup_path = state.backup_manager.app_data_dir.join("backups").join(&ws.id).join(&safe_filename);
     
     if !backup_path.exists() {
         return Err(LedgerlineError::from("Backup file does not exist"));

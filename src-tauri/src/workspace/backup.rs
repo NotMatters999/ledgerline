@@ -5,17 +5,14 @@ use chrono::Utc;
 use super::manager::WorkspaceError;
 
 fn remove_duckdb_wal(path: &Path) -> Result<(), WorkspaceError> {
-    let candidates = [
-        path.with_extension("duckdb.wal"),
-        path.with_extension("duckdb-wal"),
-    ];
+    let mut wal_os = path.as_os_str().to_os_string();
+    wal_os.push(".wal");
+    let wal = PathBuf::from(wal_os);
 
-    for wal in candidates {
-        match fs::remove_file(&wal) {
-            Ok(()) => (),
-            Err(err) if err.kind() == ErrorKind::NotFound => (),
-            Err(err) => return Err(WorkspaceError::Io(err)),
-        }
+    match fs::remove_file(&wal) {
+        Ok(()) => (),
+        Err(err) if err.kind() == ErrorKind::NotFound => (),
+        Err(err) => return Err(WorkspaceError::Io(err)),
     }
 
     Ok(())
@@ -59,6 +56,20 @@ impl BackupManager {
         let backup_file = backups_dir.join(format!("{}.duckdb.bak", now));
         
         fs::copy(db_path, &backup_file)?;
+        
+        let db_wal = {
+            let mut s = db_path.as_os_str().to_os_string();
+            s.push(".wal");
+            PathBuf::from(s)
+        };
+        if db_wal.exists() {
+            let backup_wal = {
+                let mut s = backup_file.as_os_str().to_os_string();
+                s.push(".wal");
+                PathBuf::from(s)
+            };
+            fs::copy(&db_wal, &backup_wal)?;
+        }
         
         // Retention policy: Keep only the 5 most recent backups
         if let Ok(entries) = fs::read_dir(&backups_dir) {
@@ -125,6 +136,20 @@ impl BackupManager {
         }
 
         fs::copy(backup_path, target_db_path)?;
+        
+        let backup_wal = {
+            let mut s = backup_path.as_os_str().to_os_string();
+            s.push(".wal");
+            PathBuf::from(s)
+        };
+        if backup_wal.exists() {
+            let target_wal = {
+                let mut s = target_db_path.as_os_str().to_os_string();
+                s.push(".wal");
+                PathBuf::from(s)
+            };
+            fs::copy(&backup_wal, &target_wal)?;
+        }
         Ok(())
     }
 }
@@ -150,8 +175,11 @@ mod tests {
         let target_db = dir.join("target.duckdb");
         fs::write(&source_db, "db").unwrap();
         fs::write(&target_db, "old").unwrap();
-        fs::write(target_db.with_extension("duckdb.wal"), "wal").unwrap();
-        fs::write(target_db.with_extension("duckdb-wal"), "wal").unwrap();
+        fs::write({
+            let mut s = target_db.as_os_str().to_os_string();
+            s.push(".wal");
+            PathBuf::from(s)
+        }, "wal").unwrap();
 
         let manager = BackupManager::new(&dir);
         manager.restore(&source_db, &target_db).unwrap();
@@ -160,8 +188,11 @@ mod tests {
         let source_bytes = fs::read(&source_db).unwrap();
         let target_bytes = fs::read(&target_db).unwrap();
         assert_eq!(target_bytes, source_bytes, "Restored target DB bytes must match the source backup file");
-        assert!(!target_db.with_extension("duckdb.wal").exists());
-        assert!(!target_db.with_extension("duckdb-wal").exists());
+        assert!(!{
+            let mut s = target_db.as_os_str().to_os_string();
+            s.push(".wal");
+            PathBuf::from(s)
+        }.exists());
 
         let _ = fs::remove_dir_all(&dir);
     }

@@ -19,11 +19,12 @@ CREATE TABLE IF NOT EXISTS marketing_spend (
 -- Migrate existing data from marketing_spend only once.
 INSERT INTO monthly_assumptions (month, marketing_spend, gross_margin)
 SELECT 
-    period AS month, 
-    amount AS marketing_spend, 
+    strftime(period, '%Y-%m') AS month, 
+    SUM(amount) AS marketing_spend, 
     NULL AS gross_margin
 FROM marketing_spend
-WHERE NOT EXISTS (SELECT 1 FROM monthly_assumptions);
+WHERE NOT EXISTS (SELECT 1 FROM monthly_assumptions)
+GROUP BY strftime(period, '%Y-%m');
 
 -- Drop old table if it still exists.
 DROP TABLE IF EXISTS marketing_spend;
