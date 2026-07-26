@@ -158,7 +158,7 @@ fn test_fix1_backup_system_roundtrip() {
 
     // 2. Seed real data — MUST run migrations first so mrr_log exists
     {
-        let mut conn = ledgerline_lib::db::connection::open_connection(&ws.db_path).unwrap();
+        let conn = ledgerline_lib::db::connection::open_connection(&ws.db_path).unwrap();
         conn.execute_batch("
             INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('Z', '2024-01-01', 999.0, 'USD');
         ").unwrap();
