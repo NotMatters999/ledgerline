@@ -35,7 +35,13 @@ export const Dashboard: React.FC<Props> = ({ activeWorkspaceId }) => {
     }
 
     const currentMrr = mrr.length > 0 ? mrr[mrr.length - 1].ending : 0;
+    const previousMrr = mrr.length > 1 ? mrr[mrr.length - 2].ending : null;
+    const mrrTrend = previousMrr && previousMrr > 0 ? ((currentMrr - previousMrr) / previousMrr) * 100 : null;
+
     const currentArr = arr.length > 0 ? arr[arr.length - 1].arr : 0;
+    const previousArr = arr.length > 1 ? arr[arr.length - 2].arr : null;
+    const arrTrend = previousArr && previousArr > 0 ? ((currentArr - previousArr) / previousArr) * 100 : null;
+
     const currentCustomers = mrr.length > 0 ? mrr[mrr.length - 1].ending_customers : 0;
     const currentNrr = retention.length > 0 && retention[retention.length - 1].nrr !== null 
         ? retention[retention.length - 1].nrr! * 100 
@@ -59,8 +65,8 @@ export const Dashboard: React.FC<Props> = ({ activeWorkspaceId }) => {
             ) : (
                 <>
                     <div className="grid-cards">
-                        <MetricCard title="Current ARR"  value={formatCurrency(currentArr)} trend={12.5} />
-                        <MetricCard title="Current MRR"  value={formatCurrency(currentMrr)} trend={4.2} />
+                        <MetricCard title="Current ARR"  value={formatCurrency(currentArr)} trend={arrTrend !== null ? arrTrend : undefined} />
+                        <MetricCard title="Current MRR"  value={formatCurrency(currentMrr)} trend={mrrTrend !== null ? mrrTrend : undefined} />
                         <MetricCard title="Active Customers" value={currentCustomers.toString()} />
                         <MetricCard title="Net Revenue Retention (NRR)" value={currentNrr !== null ? `${currentNrr.toFixed(1)}%` : 'N/A'} subtitle="Last Month" />
                     </div>

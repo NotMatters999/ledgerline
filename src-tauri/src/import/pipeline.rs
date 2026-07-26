@@ -111,20 +111,44 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
 
     let mut normalized_rows = Vec::with_capacity(parsed.rows.len());
     let mut total_amount = 0.0;
+    let mut validation_errors = Vec::new();
 
-    for row in &parsed.rows {
+    for (i, row) in parsed.rows.iter().enumerate() {
         let customer = row.get(customer_idx).cloned().unwrap_or_default().trim().to_string();
         let date_str = row.get(date_idx).cloned().unwrap_or_default();
         let amount_str = row.get(amount_idx).cloned().unwrap_or_default();
-        let currency = currency_idx.and_then(|i| row.get(i)).cloned().unwrap_or_else(|| "USD".to_string()).trim().to_string();
-        let category = category_idx.and_then(|i| row.get(i)).cloned().unwrap_or_else(|| "Standard".to_string()).trim().to_string();
+        let currency = currency_idx.and_then(|idx| row.get(idx)).cloned().unwrap_or_else(|| "USD".to_string()).trim().to_string();
+        let category = category_idx.and_then(|idx| row.get(idx)).cloned().unwrap_or_else(|| "Standard".to_string()).trim().to_string();
 
         if customer.is_empty() && date_str.is_empty() && amount_str.is_empty() {
             continue; 
         }
 
-        let date = format.parse(&date_str).ok_or_else(|| NormalizeError::InvalidDate(date_str.clone()))?;
-        let amount = clean_currency(&amount_str)?;
+        let date = match format.parse(&date_str) {
+            Some(d) => d,
+            None => {
+                validation_errors.push(ValidationError {
+                    row_index: (i + 1) as i32,
+                    customer_id: customer.clone(),
+                    field: "date".to_string(),
+                    message: format!("Invalid date format: {}", date_str),
+                });
+                continue;
+            }
+        };
+
+        let amount = match clean_currency(&amount_str) {
+            Ok(a) => a,
+            Err(e) => {
+                validation_errors.push(ValidationError {
+                    row_index: (i + 1) as i32,
+                    customer_id: customer.clone(),
+                    field: "amount".to_string(),
+                    message: format!("Invalid amount: {}", e),
+                });
+                continue;
+            }
+        };
         
         let date_iso = date.format("%Y-%m-%d").to_string();
         
@@ -132,7 +156,6 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
         normalized_rows.push((customer, date_iso, amount, currency, category));
     }
 
-    let mut validation_errors = Vec::new();
     for (i, row) in normalized_rows.iter().enumerate() {
         if let Err(e) = validate_row(i + 1, &row.0, &row.1, row.2, &row.3, &row.4) {
             validation_errors.push(e);

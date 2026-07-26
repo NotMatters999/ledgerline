@@ -9,10 +9,10 @@ export const RetentionView: React.FC<Props> = ({ activeWorkspaceId }) => {
     const { retention, isLoading, error, fetchData } = useFinancialsStore();
 
     useEffect(() => {
-        if (activeWorkspaceId && retention.length === 0) {
+        if (activeWorkspaceId) {
             fetchData(activeWorkspaceId);
         }
-    }, [activeWorkspaceId, retention.length, fetchData]);
+    }, [activeWorkspaceId, fetchData]);
 
     if (isLoading && retention.length === 0) {
         return (
