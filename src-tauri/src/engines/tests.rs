@@ -84,9 +84,9 @@ fn test_retention() {
     let ret = calculate_retention(&conn).unwrap();
 
     // Mar GRR = (400 - 150 churn - 25 contraction) / 400 = 225/400 = 0.5625
-    assert_eq!(ret[2].grr, 0.5625);
+    assert_eq!(ret[2].grr.unwrap(), 0.5625);
     // Mar Logo Retention = (3 - 1) / 3 = 0.666
-    assert_eq!(ret[2].logo_retention, 2.0/3.0);
+    assert_eq!(ret[2].logo_retention.unwrap(), 2.0/3.0);
 }
 
 #[test]
@@ -95,9 +95,9 @@ fn test_cac_ltv_payback() {
     let cac = calculate_cac(&conn).unwrap();
     
     // Jan CAC = 1000 spend / 2 new = 500
-    assert_eq!(cac[0].cac, 500.0);
+    assert_eq!(cac[0].cac.unwrap(), 500.0);
     // Feb CAC = 500 spend / 1 new = 500
-    assert_eq!(cac[1].cac, 500.0);
+    assert_eq!(cac[1].cac.unwrap(), 500.0);
 
     let ltv = calculate_ltv(&conn).unwrap();
     // Mar ARPA = 225 / 2 = 112.5
@@ -105,13 +105,13 @@ fn test_cac_ltv_payback() {
     // Mar Churn Rate = 1 churned / 3 beginning = 0.333
     assert_eq!(ltv[2].churn_rate, 1.0/3.0);
     // Mar LTV = (112.5 * 0.8) / 0.333 = 270.0
-    assert_eq!(ltv[2].ltv, 270.0);
+    assert_eq!(ltv[2].ltv.unwrap(), 270.0);
 
     let payback = calculate_payback(&conn).unwrap();
     // Mar Payback = 500 (since Mar CAC is 500/0=0 wait, Mar new=0, so CAC=0?)\
     // Wait, Mar spend=500, new=0, CAC=0? The cac.rs says: cac = spend/new, if new>0 else 0.
     // So Mar CAC = 0. Payback = 0.
-    assert_eq!(payback[2].payback_months, 0.0);
+    assert_eq!(payback[2].payback_months.unwrap(), 0.0);
 }
 
 #[test]

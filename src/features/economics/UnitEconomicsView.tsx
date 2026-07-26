@@ -30,7 +30,7 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
         if (mrr.length > 0) {
             setSpendPeriodInput(mrr[mrr.length - 1].month);
         }
-    }, [activeWorkspaceId, ltv.length, mrr.length, mrr, fetchData]);
+    }, [activeWorkspaceId, ltv.length, mrr.length, fetchData]);
 
     const handleMarginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

@@ -136,7 +136,7 @@ mod tests {
         assert_eq!(mar_ltv1.arpa, 112.5);
         assert_eq!(mar_ltv1.churn_rate, 1.0/3.0);
         // LTV = (112.5 * 1.0) / (1/3) = 337.5
-        assert_eq!(mar_ltv1.ltv, 337.5);
+        assert_eq!(mar_ltv1.ltv.unwrap(), 337.5);
 
         // 2. Set Gross Margin to 0.50
         conn.execute("INSERT INTO settings (key, value) VALUES (?, ?)", ["gross_margin", "0.50"]).unwrap();
@@ -144,7 +144,7 @@ mod tests {
         let ltv2 = calculate_ltv(&conn).unwrap();
         let mar_ltv2 = &ltv2[1];
         // LTV = (112.5 * 0.5) / (1/3) = 168.75
-        assert_eq!(mar_ltv2.ltv, 168.75);
+        assert_eq!(mar_ltv2.ltv.unwrap(), 168.75);
 
         // 3. Marketing Spend and Payback
         // Payback = CAC / (ARPA * margin)
@@ -163,6 +163,6 @@ mod tests {
         // Margin = 0.50.
         // MRR contribution = ARPA * Margin = 45.833...
         // Payback months = CAC / MRR contrib = 500 / 45.833... = 10.909...
-        assert!((mar_payback.payback_months - 10.909090909090908).abs() < 1e-5);
+        assert!((mar_payback.payback_months.unwrap() - 10.909090909090908).abs() < 1e-5);
     }
 }

@@ -136,7 +136,7 @@ mod tests {
     use std::path::PathBuf;
 
     fn get_test_dir() -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("ledgerline_backup_test_{}", Utc::now().timestamp_nanos()));
+        let dir = std::env::temp_dir().join(format!("ledgerline_backup_test_{}", Utc::now().timestamp_nanos_opt().unwrap_or(0)));
         let _ = fs::remove_dir_all(&dir);
         dir
     }

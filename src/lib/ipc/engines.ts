@@ -80,33 +80,33 @@ export interface CohortData {
 }
 
 export async function getMrr(workspaceId: string): Promise<MrrMovement[]> {
-    return await invoke<MrrMovement[]>('mrr_get', { workspaceId });
+    return await invoke<MrrMovement[]>('mrr_get', { workspace_id: workspaceId });
 }
 
 export async function getArr(workspaceId: string): Promise<ArrMovement[]> {
-    return await invoke<ArrMovement[]>('arr_get', { workspaceId });
+    return await invoke<ArrMovement[]>('arr_get', { workspace_id: workspaceId });
 }
 
 export async function getRetention(workspaceId: string): Promise<RetentionMovement[]> {
-    return await invoke<RetentionMovement[]>('retention_get', { workspaceId });
+    return await invoke<RetentionMovement[]>('retention_get', { workspace_id: workspaceId });
 }
 
 export async function getLtv(workspaceId: string): Promise<LtvMovement[]> {
-    return await invoke<LtvMovement[]>('ltv_get', { workspaceId });
+    return await invoke<LtvMovement[]>('ltv_get', { workspace_id: workspaceId });
 }
 
 export async function getCac(workspaceId: string): Promise<CacMovement[]> {
-    return await invoke<CacMovement[]>('cac_get', { workspaceId });
+    return await invoke<CacMovement[]>('cac_get', { workspace_id: workspaceId });
 }
 
 export async function getPayback(workspaceId: string): Promise<PaybackMovement[]> {
-    return await invoke<PaybackMovement[]>('payback_get', { workspaceId });
+    return await invoke<PaybackMovement[]>('payback_get', { workspace_id: workspaceId });
 }
 
 export async function getForecast(workspaceId: string, params: ForecastParams): Promise<ForecastMovement[]> {
-    return await invoke<ForecastMovement[]>('forecast_get', { workspaceId, params });
+    return await invoke<ForecastMovement[]>('forecast_get', { workspace_id: workspaceId, params });
 }
 
 export async function getCohort(workspaceId: string): Promise<CohortData> {
-    return await invoke<CohortData>('cohort_get', { workspaceId });
+    return await invoke<CohortData>('cohort_get', { workspace_id: workspaceId });
 }
