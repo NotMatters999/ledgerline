@@ -9,10 +9,10 @@ export const WaterfallView: React.FC<Props> = ({ activeWorkspaceId }) => {
     const [selectedMonth, setSelectedMonth] = useState<string>('');
 
     useEffect(() => {
-        if (activeWorkspaceId && mrr.length === 0) {
+        if (activeWorkspaceId) {
             fetchData(activeWorkspaceId);
         }
-    }, [activeWorkspaceId, mrr.length, fetchData]);
+    }, [activeWorkspaceId, fetchData]);
 
     useEffect(() => {
         if (mrr.length > 0 && !selectedMonth) {

@@ -15,16 +15,16 @@ pub fn import_preview(_workspace_id: String, file_path: String, _state: State<'_
 #[tauri::command]
 pub fn import_commit(workspace_id: String, file_path: String, state: State<'_, AppState>) -> Result<(), LedgerlineError> {
     log_info("Import", &format!("Starting import commit for file: {}", file_path));
-    let (ws_name, db_path) = {
+    let (ws_id, db_path) = {
         let mgr = state.workspace_manager.lock().unwrap();
         let workspaces = mgr.list_workspaces().map_err(|_| ImportError::Database(duckdb::Error::QueryReturnedNoRows))?;
         let ws = workspaces.iter().find(|w| w.id == workspace_id).ok_or_else(|| ImportError::Database(duckdb::Error::QueryReturnedNoRows))?;
-        (ws.name.clone(), ws.db_path.clone())
+        (ws.id.clone(), ws.db_path.clone())
     };
     
     // Automated Snapshot: Protect the ledger before massive mutation
     // This synchronously copies the .duckdb file (usually <100MB, taking ~5-50ms on modern SSDs).
-    if let Err(e) = state.backup_manager.backup(&db_path, &ws_name) {
+    if let Err(e) = state.backup_manager.backup(&db_path, &ws_id) {
         // If backup fails, we abort the import to prevent unsafe mutation without a rollback net
         return Err(LedgerlineError::from(ImportError::Parser(crate::import::parser::ParserError::Io(std::io::Error::other(format!("Failed to create safety snapshot: {}", e))))));
     }
@@ -60,7 +60,7 @@ mod tests {
         fs::write(&ws.db_path, dummy_data).unwrap();
         
         let start = Instant::now();
-        bk_mgr.backup(&ws.db_path, &ws.name).unwrap();
+        bk_mgr.backup(&ws.db_path, &ws.id).unwrap();
         let elapsed = start.elapsed();
         
         // The spec requires 100k rows (approx 10-50MB) to import in < 5 seconds.

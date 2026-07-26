@@ -24,8 +24,6 @@ pub enum ImportError {
     DuplicateFileHash,
     #[error("Duplicate dataset fingerprint detected. Data already imported.")]
     DuplicateFingerprint,
-    #[error("Likely duplicate dataset (same row count and total MRR as previous import).")]
-    LikelyDuplicate,
     #[error("Validation failed for one or more rows.")]
     Validation(Vec<ValidationError>),
 }
@@ -71,14 +69,17 @@ pub fn preview(path: &Path) -> Result<PreviewResult, ImportError> {
         let customer = row.get(customer_idx).cloned().unwrap_or_default().trim().to_string();
         let date_str = row.get(date_idx).cloned().unwrap_or_default();
         let amount_str = row.get(amount_idx).cloned().unwrap_or_default();
-        let currency = currency_idx.and_then(|i| row.get(i)).cloned().unwrap_or_else(|| "USD".to_string()).trim().to_string();
-        let category = category_idx.and_then(|i| row.get(i)).cloned().unwrap_or_else(|| "Standard".to_string()).trim().to_string();
+        let currency = currency_idx.and_then(|i| row.get(i)).map(|s| s.trim()).filter(|s| !s.is_empty()).unwrap_or("USD").to_string();
+        let category = category_idx.and_then(|i| row.get(i)).map(|s| s.trim()).filter(|s| !s.is_empty()).unwrap_or("Standard").to_string();
         
         if customer.is_empty() && date_str.is_empty() && amount_str.is_empty() {
             continue; 
         }
 
-        let date = format.parse(&date_str).ok_or_else(|| NormalizeError::InvalidDate(date_str.clone()))?;
+        let date = match format.parse(&date_str) {
+            Some(d) => d,
+            None => continue,
+        };
         let amount = clean_currency(&amount_str)?;
 
         sample_normalized.push((customer, date.format("%Y-%m-%d").to_string(), amount, currency, category));
@@ -117,8 +118,8 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
         let customer = row.get(customer_idx).cloned().unwrap_or_default().trim().to_string();
         let date_str = row.get(date_idx).cloned().unwrap_or_default();
         let amount_str = row.get(amount_idx).cloned().unwrap_or_default();
-        let currency = currency_idx.and_then(|idx| row.get(idx)).cloned().unwrap_or_else(|| "USD".to_string()).trim().to_string();
-        let category = category_idx.and_then(|idx| row.get(idx)).cloned().unwrap_or_else(|| "Standard".to_string()).trim().to_string();
+        let currency = currency_idx.and_then(|idx| row.get(idx)).map(|s| s.trim()).filter(|s| !s.is_empty()).unwrap_or("USD").to_string();
+        let category = category_idx.and_then(|idx| row.get(idx)).map(|s| s.trim()).filter(|s| !s.is_empty()).unwrap_or("Standard").to_string();
 
         if customer.is_empty() && date_str.is_empty() && amount_str.is_empty() {
             continue; 
@@ -149,12 +150,15 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
         let date_iso = date.format("%Y-%m-%d").to_string();
         
         total_amount += amount;
-        normalized_rows.push((customer, date_iso, amount, currency, category));
+        normalized_rows.push((i + 1, (customer, date_iso, amount, currency, category)));
     }
 
-    for (i, row) in normalized_rows.iter().enumerate() {
-        if let Err(e) = validate_row(i + 1, &row.0, &row.1, row.2, &row.3, &row.4) {
+    let mut final_rows = Vec::with_capacity(normalized_rows.len());
+    for (row_idx, row) in normalized_rows.into_iter() {
+        if let Err(e) = validate_row(row_idx, &row.0, &row.1, row.2, &row.3, &row.4) {
             validation_errors.push(e);
+        } else {
+            final_rows.push(row);
         }
     }
 
@@ -163,7 +167,7 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
     }
 
     let f_hash = file_hash(path).unwrap_or_default();
-    let f_print = dataset_fingerprint(&normalized_rows);
+    let f_print = dataset_fingerprint(&final_rows);
 
     let tx = conn.transaction()?;
 
@@ -182,9 +186,6 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
         if fp == f_print {
             return Err(ImportError::DuplicateFingerprint);
         }
-        if rc == normalized_rows.len() as i64 && (ta - total_amount).abs() < 0.01 {
-            return Err(ImportError::LikelyDuplicate);
-        }
     }
     
     drop(rows);
@@ -194,12 +195,12 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
 
     {
         let mut app_stmt = tx.prepare("INSERT INTO import_history (id, file_hash, fingerprint, imported_at, row_count, status, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?)")?;
-        app_stmt.execute(duckdb::params![import_id, f_hash, f_print, Utc::now().to_rfc3339(), normalized_rows.len() as i64, "SUCCESS", total_amount])?;
+        app_stmt.execute(duckdb::params![import_id, f_hash, f_print, Utc::now().to_rfc3339(), final_rows.len() as i64, "SUCCESS", total_amount])?;
     }
 
     {
         let mut insert_stmt = tx.prepare("INSERT INTO mrr_log (customer_id, period, mrr_amount, currency, category) VALUES (?, ?, ?, ?, ?)")?;
-        for row in &normalized_rows {
+        for row in &final_rows {
             insert_stmt.execute(duckdb::params![row.0, row.1, row.2, row.3, row.4])?;
         }
     }

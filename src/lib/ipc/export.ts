@@ -7,15 +7,19 @@ export interface CsvExportResult {
 }
 
 export async function exportCsv(workspaceId: string): Promise<CsvExportResult> {
-    return await invoke<CsvExportResult>('export_csv', { _workspace_id: workspaceId });
+    return await invoke<CsvExportResult>('export_csv', { workspace_id: workspaceId });
 }
 
 export async function exportPdf(workspaceId: string): Promise<number[]> {
-    return await invoke<number[]>('export_pdf', { _workspace_id: workspaceId });
+    return await invoke<number[]>('export_pdf', { workspace_id: workspaceId });
 }
 
 export function downloadBlob(content: string | Uint8Array, filename: string, mimeType: string) {
-    const blob = new Blob([content], { type: mimeType });
+    let finalContent = content;
+    if (mimeType === 'application/pdf' && Array.isArray(content)) {
+        finalContent = new Uint8Array(content);
+    }
+    const blob = new Blob([finalContent], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

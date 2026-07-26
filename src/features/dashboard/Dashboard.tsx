@@ -10,12 +10,12 @@ export const Dashboard: React.FC<Props> = ({ activeWorkspaceId }) => {
     const { mrr, arr, retention, isLoading, error, fetchData } = useFinancialsStore();
 
     useEffect(() => {
-        if (activeWorkspaceId && mrr.length === 0) {
+        if (activeWorkspaceId) {
             fetchData(activeWorkspaceId);
         }
-    }, [activeWorkspaceId, mrr.length, fetchData]);
+    }, [activeWorkspaceId, fetchData]);
 
-    if (isLoading) {
+    if (isLoading && mrr.length === 0) {
         return (
             <div className="flex-center" style={{ height: '100%', color: 'var(--text-primary)' }}>
                 <div className="spinner"></div>
@@ -43,7 +43,7 @@ export const Dashboard: React.FC<Props> = ({ activeWorkspaceId }) => {
     const arrTrend = previousArr && previousArr > 0 ? ((currentArr - previousArr) / previousArr) * 100 : null;
 
     const currentCustomers = mrr.length > 0 ? mrr[mrr.length - 1].ending_customers : 0;
-    const currentNrr = retention.length > 0 && retention[retention.length - 1].nrr !== null 
+    const currentNrr = retention.length > 0 && retention[retention.length - 1].nrr != null 
         ? retention[retention.length - 1].nrr! * 100 
         : null;
 

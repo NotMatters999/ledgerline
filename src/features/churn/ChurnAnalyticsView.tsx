@@ -8,8 +8,8 @@ export const ChurnAnalyticsView: React.FC<{ activeWorkspaceId: string }> = ({ ac
     const { mrr, retention, isLoading, error, fetchData } = useFinancialsStore();
 
     useEffect(() => {
-        if (activeWorkspaceId && mrr.length === 0) fetchData(activeWorkspaceId);
-    }, [activeWorkspaceId, mrr.length, fetchData]);
+        if (activeWorkspaceId) fetchData(activeWorkspaceId);
+    }, [activeWorkspaceId, fetchData]);
 
     // ── Summary metrics ─────────────────────────────────────────────────────
     const latestMrr = mrr.length > 0 ? mrr[mrr.length - 1] : null;

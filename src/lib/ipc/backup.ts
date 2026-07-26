@@ -5,7 +5,7 @@ export async function listBackups(workspaceId: string): Promise<string[]> {
 }
 
 export async function createBackup(workspaceId: string): Promise<string> {
-    return await invoke<string>('backup_create', { _workspace_id: workspaceId });
+    return await invoke<string>('backup_create', { workspace_id: workspaceId });
 }
 
 export async function requestRestore(workspaceId: string, filename: string): Promise<string> {
@@ -13,5 +13,5 @@ export async function requestRestore(workspaceId: string, filename: string): Pro
 }
 
 export async function confirmRestore(workspaceId: string, filename: string, token: string): Promise<void> {
-    return await invoke<void>('backup_restore_confirm', { _workspace_id: workspaceId, filename, token });
+    await invoke('backup_restore_confirm', { workspace_id: workspaceId, filename, token });
 }

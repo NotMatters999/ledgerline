@@ -24,7 +24,10 @@ export const CohortView: React.FC<{ activeWorkspaceId: string }> = ({ activeWork
         const yCategories = trailingRows.map((r: any) => r.join_month.substring(0, 7)).reverse();
         
         // X-axis categories (Months since join, max 12)
-        const maxMonths = Math.min(12, trailingRows.reduce((max, r: any) => Math.max(max, Math.max(0, r.data.length - 1)), 0));
+        const maxMonths = Math.min(12, trailingRows.reduce((max, r: any) => {
+            const rowMax = r.data.reduce((m: number, d: any) => Math.max(m, d.month_index), 0);
+            return Math.max(max, rowMax);
+        }, 0));
         const xCategories = Array.from({ length: maxMonths + 1 }, (_, i) => `Month ${i}`);
 
         // Format data into [x, y, value]

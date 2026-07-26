@@ -14,10 +14,15 @@ pub fn dataset_fingerprint(normalized_rows: &[(String, String, f64, String, Stri
     let mut hasher = Sha256::new();
     for row in normalized_rows {
         hasher.update(row.0.as_bytes());
+        hasher.update(b"|");
         hasher.update(row.1.as_bytes());
+        hasher.update(b"|");
         hasher.update(row.2.to_string().as_bytes());
+        hasher.update(b"|");
         hasher.update(row.3.as_bytes());
+        hasher.update(b"|");
         hasher.update(row.4.as_bytes());
+        hasher.update(b"|");
     }
     let result = hasher.finalize();
     format!("{:x}", result)

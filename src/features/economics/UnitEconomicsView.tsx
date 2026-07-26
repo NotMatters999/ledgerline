@@ -19,7 +19,7 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
 
     // Initialize inputs
     useEffect(() => {
-        if (activeWorkspaceId && ltv.length === 0) {
+        if (activeWorkspaceId) {
             fetchData(activeWorkspaceId);
         }
 
@@ -27,10 +27,10 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
             .then(val => setGrossMarginInput((val * 100).toString()))
             .catch(() => setGrossMarginInput('100'));
 
-        if (mrr.length > 0) {
+        if (mrr.length > 0 && !spendPeriodInput) {
             setSpendPeriodInput(mrr[mrr.length - 1].month);
         }
-    }, [activeWorkspaceId, ltv.length, mrr.length, fetchData]);
+    }, [activeWorkspaceId, mrr.length, spendPeriodInput, fetchData]);
 
     const handleMarginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
