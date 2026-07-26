@@ -35,6 +35,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
         period: new Date().toISOString().slice(0, 10),
         mrr_amount: 0,
         currency: 'USD',
+        category: 'Standard',
     });
     const [submitting, setSubmitting] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
@@ -111,6 +112,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                 period: lastDeleted.period,
                 mrr_amount: lastDeleted.mrr_amount,
                 currency: lastDeleted.currency,
+                category: lastDeleted.category,
             });
             setUndoVisible(false);
             setLastDeleted(null);
@@ -131,7 +133,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
         try {
             await addMrrLog(activeWorkspaceId, formData);
             setShowAddForm(false);
-            setFormData({ customer_id: '', period: new Date().toISOString().slice(0, 10), mrr_amount: 0, currency: 'USD' });
+            setFormData({ customer_id: '', period: new Date().toISOString().slice(0, 10), mrr_amount: 0, currency: 'USD', category: 'Standard' });
             setPage(0);
             await refreshRows(0);
             await fetchData(activeWorkspaceId);
@@ -206,6 +208,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                             { label: 'Period (YYYY-MM-DD)', key: 'period', type: 'date', placeholder: '' },
                             { label: 'MRR Amount', key: 'mrr_amount', type: 'number', placeholder: '0.00' },
                             { label: 'Currency', key: 'currency', type: 'text', placeholder: 'USD' },
+                            { label: 'Category', key: 'category', type: 'text', placeholder: 'Standard' },
                         ].map(({ label, key, type, placeholder }) => (
                             <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
@@ -214,6 +217,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                                     placeholder={placeholder}
                                     step={type === 'number' ? '0.01' : undefined}
                                     min={type === 'number' ? '0' : undefined}
+                                    max={type === 'date' ? new Date().toISOString().slice(0, 10) : undefined}
                                     value={(formData as any)[key]}
                                     onChange={e => setFormData(prev => ({
                                         ...prev,
@@ -272,6 +276,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                                 { label: 'Period', col: 'period' },
                                 { label: 'MRR Amount', col: 'mrr_amount' },
                                 { label: 'Currency', col: 'currency' },
+                                { label: 'Category', col: 'category' },
                             ].map(({ label, col }) => (
                                 <th
                                     key={col}
@@ -302,6 +307,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                                     {new Intl.NumberFormat('en-US', { style: 'currency', currency: row.currency, maximumFractionDigits: 2 }).format(row.mrr_amount)}
                                 </td>
                                 <td style={{ padding: '0.625rem 1rem', color: 'var(--text-muted)' }}>{row.currency}</td>
+                                <td style={{ padding: '0.625rem 1rem', color: 'var(--text-muted)' }}>{row.category || '—'}</td>
                                 <td style={{ padding: '0.625rem 1rem', textAlign: 'right' }}>
                                     <button
                                         onClick={() => handleDelete(row)}

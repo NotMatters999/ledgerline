@@ -9,8 +9,8 @@ interface RetentionChartProps {
 export const RetentionChart: React.FC<RetentionChartProps> = ({ data }) => {
     const option = useMemo(() => {
         const months = data.map(d => d.month.substring(0, 7)); // YYYY-MM
-        const nrr = data.map(d => (d.nrr * 100).toFixed(2));
-        const grr = data.map(d => (d.grr * 100).toFixed(2));
+        const nrr = data.map(d => d.nrr !== null ? (d.nrr * 100).toFixed(2) : null);
+        const grr = data.map(d => d.grr !== null ? (d.grr * 100).toFixed(2) : null);
 
         return {
             backgroundColor: 'transparent',

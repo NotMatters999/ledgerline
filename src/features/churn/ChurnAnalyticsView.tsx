@@ -15,14 +15,17 @@ export const ChurnAnalyticsView: React.FC<{ activeWorkspaceId: string }> = ({ ac
     const latestMrr = mrr.length > 0 ? mrr[mrr.length - 1] : null;
     const latestRet = retention.length > 0 ? retention[retention.length - 1] : null;
 
-    const logoChurnRate = latestRet
+    const logoChurnRate = (latestRet && latestRet.logo_retention !== null)
         ? ((1 - latestRet.logo_retention) * 100).toFixed(1)
         : '—';
-    const revenueChurnRate = latestRet
+    const revenueChurnRate = (latestRet && latestRet.grr !== null)
         ? ((1 - latestRet.grr) * 100).toFixed(1)
         : '—';
-    const netRevenueChurn = latestMrr
+    const grossRevenueChurn = latestMrr
         ? `$${latestMrr.churn.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+        : '—';
+    const netRevenueChurnValue = latestMrr
+        ? `$${(latestMrr.contraction + latestMrr.churn - latestMrr.expansion - latestMrr.reactivation).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
         : '—';
     const newVsChurn = latestMrr && latestMrr.churn > 0
         ? (latestMrr.new / latestMrr.churn).toFixed(2)
@@ -86,8 +89,8 @@ export const ChurnAnalyticsView: React.FC<{ activeWorkspaceId: string }> = ({ ac
     const logoChurnOption = useMemo(() => {
         if (retention.length === 0) return null;
         const months = retention.map(r => r.month.substring(0, 7));
-        const logoRet = retention.map(r => parseFloat(((1 - r.logo_retention) * 100).toFixed(2)));
-        const revenueRet = retention.map(r => parseFloat(((1 - r.grr) * 100).toFixed(2)));
+        const logoRet = retention.map(r => r.logo_retention !== null ? parseFloat(((1 - r.logo_retention) * 100).toFixed(2)) : 0);
+        const revenueRet = retention.map(r => r.grr !== null ? parseFloat(((1 - r.grr) * 100).toFixed(2)) : 0);
 
         return {
             backgroundColor: 'transparent',
@@ -160,19 +163,25 @@ export const ChurnAnalyticsView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                     {
                         label: 'Logo Churn Rate',
                         value: logoChurnRate === '—' ? '—' : `${logoChurnRate}%`,
-                        tip: 'Percentage of customers who cancelled this month vs total customers at start of month.',
-                        danger: parseFloat(logoChurnRate) > 5,
+                        tip: 'Percentage of customers who canceled this month vs total customers at start of month.',
+                        danger: logoChurnRate !== '—' && parseFloat(logoChurnRate) > 5,
                     },
                     {
                         label: 'Revenue Churn Rate',
                         value: revenueChurnRate === '—' ? '—' : `${revenueChurnRate}%`,
                         tip: 'MRR lost to downgrades and cancellations, as a % of beginning MRR. AKA Gross Revenue Churn.',
-                        danger: parseFloat(revenueChurnRate) > 5,
+                        danger: revenueChurnRate !== '—' && parseFloat(revenueChurnRate) > 5,
                     },
                     {
                         label: 'Churned MRR (Last Mo.)',
-                        value: netRevenueChurn,
-                        tip: 'Absolute MRR lost to cancellations in the most recent month.',
+                        value: grossRevenueChurn,
+                        tip: 'Absolute MRR lost to cancellations in the most recent month (Gross Churn).',
+                        danger: false,
+                    },
+                    {
+                        label: 'Net MRR Churn',
+                        value: netRevenueChurnValue,
+                        tip: 'Absolute MRR lost minus MRR gained from existing customers (Contraction + Churn - Expansion - Reactivation).',
                         danger: false,
                     },
                     {

@@ -96,7 +96,7 @@ export const ForecastingView: React.FC<{ activeWorkspaceId: string }> = ({ activ
                 <MetricCard 
                     title={`Projected MRR (${endMonth})`} 
                     value={formatCurrency(endMrr)} 
-                    subtitle="At end of 12m period"
+                    subtitle="At end of 12-month period"
                 />
             </div>
 

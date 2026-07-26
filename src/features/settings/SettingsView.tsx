@@ -207,7 +207,7 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
                         },
                         {
                             label: 'FX Rate (to USD)',
-                            hint: 'Multiply all MRR figures by this factor for USD-normalised reporting. Default: 1.00',
+                            hint: 'Multiply all MRR figures by this factor for USD-normalized reporting. Default: 1.00',
                             value: fxRate,
                             setter: setFxRate,
                             type: 'number',

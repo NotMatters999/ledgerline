@@ -21,6 +21,7 @@ pub struct MrrLogRow {
     pub period: String,
     pub mrr_amount: f64,
     pub currency: String,
+    pub category: Option<String>,
 }
 
 // ─── LIST: search + sort + paginate ──────────────────────────────────────────
@@ -48,7 +49,7 @@ pub fn mrr_log_list(
     let safe_dir = if sort_dir.to_uppercase() == "DESC" { "DESC" } else { "ASC" };
 
     let query = format!(
-        "SELECT rowid, customer_id, period::VARCHAR, mrr_amount, currency
+        "SELECT rowid, customer_id, period::VARCHAR, mrr_amount, currency, category
          FROM mrr_log
          WHERE customer_id ILIKE ? OR currency ILIKE ?
          ORDER BY {} {}
@@ -67,6 +68,7 @@ pub fn mrr_log_list(
                 period: row.get(2)?,
                 mrr_amount: row.get(3)?,
                 currency: row.get(4)?,
+                category: row.get(5)?,
             })
         },
     ).map_err(|e| e.to_string())?;
@@ -101,6 +103,7 @@ pub struct MrrLogAddPayload {
     pub period: String,
     pub mrr_amount: f64,
     pub currency: String,
+    pub category: Option<String>,
 }
 
 #[tauri::command]
@@ -118,7 +121,7 @@ pub fn mrr_log_add(
         &row.period,
         row.mrr_amount,
         &row.currency,
-        "Standard", // category not in UI, default to Standard
+        row.category.as_deref().unwrap_or("Standard"),
     ).map_err(|e| LedgerlineError::from(e.reason.as_str()))?;
 
     let mut conn = get_workspace_conn(&workspace_id, &state).map_err(LedgerlineError::from)?;
@@ -126,8 +129,8 @@ pub fn mrr_log_add(
     // Use a transaction for atomicity
     let tx = conn.transaction().map_err(|e| e.to_string())?;
     tx.execute(
-        "INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES (?, ?, ?, ?)",
-        duckdb::params![row.customer_id, row.period, row.mrr_amount, row.currency],
+        "INSERT INTO mrr_log (customer_id, period, mrr_amount, currency, category) VALUES (?, ?, ?, ?, ?)",
+        duckdb::params![row.customer_id, row.period, row.mrr_amount, row.currency, row.category.unwrap_or_else(|| "Standard".to_string())],
     ).map_err(|e| e.to_string())?;
     tx.commit().map_err(|e| e.to_string())?;
 
@@ -149,7 +152,7 @@ pub fn mrr_log_delete(
 
     // Fetch before deleting so the caller can cache it for undo
     let deleted_row = conn.query_row(
-        "SELECT rowid, customer_id, period::VARCHAR, mrr_amount, currency FROM mrr_log WHERE rowid = ?",
+        "SELECT rowid, customer_id, period::VARCHAR, mrr_amount, currency, category FROM mrr_log WHERE rowid = ?",
         duckdb::params![rowid],
         |row| Ok(MrrLogRow {
             rowid: row.get(0)?,
@@ -157,6 +160,7 @@ pub fn mrr_log_delete(
             period: row.get(2)?,
             mrr_amount: row.get(3)?,
             currency: row.get(4)?,
+            category: row.get(5)?,
         }),
     ).map_err(|e| LedgerlineError::from(e.to_string()))?;
 

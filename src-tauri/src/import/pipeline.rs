@@ -179,10 +179,9 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
     }
 
     {
-        let mut insert_stmt = tx.prepare("INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES (?, ?, ?, ?)")?;
+        let mut insert_stmt = tx.prepare("INSERT INTO mrr_log (customer_id, period, mrr_amount, currency, category) VALUES (?, ?, ?, ?, ?)")?;
         for row in &normalized_rows {
-            // Note: Schema currently does not have a category column in mrr_log, so we just drop it or store in metadata later
-            insert_stmt.execute(duckdb::params![row.0, row.1, row.2, row.3])?;
+            insert_stmt.execute(duckdb::params![row.0, row.1, row.2, row.3, row.4])?;
         }
     }
 

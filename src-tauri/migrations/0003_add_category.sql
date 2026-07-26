@@ -1,0 +1,1 @@
+ALTER TABLE mrr_log ADD COLUMN category VARCHAR;

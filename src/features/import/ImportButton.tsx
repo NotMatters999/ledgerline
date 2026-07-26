@@ -40,7 +40,7 @@ export const ImportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
             return;
         }
 
-        setPhase({ tag: 'loading', message: 'Analysing file…' });
+        setPhase({ tag: 'loading', message: 'Analyzing file…' });
         try {
             const result = await importPreview(activeWorkspaceId, filePath);
             setPhase({ tag: 'preview', result, filePath });

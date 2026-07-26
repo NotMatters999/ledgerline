@@ -183,7 +183,7 @@ export const CustomerEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({
                         label: 'ARPA',
                         value: formatCurrency(arpa),
                         trend: arpaTrend,
-                        tip: 'Average Revenue Per Account: Ending MRR ÷ Ending Customers. Tracks monetisation health.',
+                        tip: 'Average Revenue Per Account: Ending MRR ÷ Ending Customers. Tracks monetization health.',
                     },
                     {
                         label: 'Active Customers',
@@ -226,7 +226,7 @@ export const CustomerEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({
             <div className="glass-panel p-6" style={{ height: 340 }}>
                 <h3 className="card-title" style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>
                     ARPA Trend
-                    <Tooltip text="Rising ARPA signals better monetisation or upsell success. Declining ARPA can flag pricing pressure or a mix-shift toward lower-tier plans." />
+                    <Tooltip text="Rising ARPA signals better monetization or upsell success. Declining ARPA can flag pricing pressure or a mix-shift toward lower-tier plans." />
                 </h3>
                 {arpaOption ? (
                     <div style={{ height: 260 }}><CoreChart option={arpaOption} /></div>

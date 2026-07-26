@@ -23,14 +23,14 @@ export interface ArrMovement {
 
 export interface RetentionMovement {
     month: string;
-    grr: number;
-    nrr: number;
-    logo_retention: number;
+    grr: number | null;
+    nrr: number | null;
+    logo_retention: number | null;
 }
 
 export interface LtvMovement {
     month: string;
-    ltv: number;
+    ltv: number | null;
     arpa: number;
     gross_margin: number;
     churn_rate: number;
@@ -39,12 +39,12 @@ export interface LtvMovement {
 export interface CacMovement {
     month: string;
     marketing_spend: number;
-    cac: number;
+    cac: number | null;
 }
 
 export interface PaybackMovement {
     month: string;
-    payback_months: number;
+    payback_months: number | null;
 }
 
 export interface ForecastParams {

@@ -6,6 +6,7 @@ export interface MrrLogRow {
     period: string;
     mrr_amount: number;
     currency: string;
+    category?: string | null;
 }
 
 export interface MrrLogAddPayload {
@@ -13,6 +14,7 @@ export interface MrrLogAddPayload {
     period: string;
     mrr_amount: number;
     currency: string;
+    category?: string | null;
 }
 
 export async function listMrrLog(

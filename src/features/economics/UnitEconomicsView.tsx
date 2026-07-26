@@ -93,17 +93,18 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
         );
     }
 
-    const currentLtv = ltv.length > 0 ? ltv[ltv.length - 1].ltv : 0;
-    const currentCac = cac.length > 0 ? cac[cac.length - 1].cac : 0;
-    const currentPayback = payback.length > 0 ? payback[payback.length - 1].payback_months : 0;
-    const currentRatio = currentCac > 0 ? currentLtv / currentCac : 0;
+    const currentLtv = ltv.length > 0 ? ltv[ltv.length - 1].ltv : null;
+    const currentCac = cac.length > 0 ? cac[cac.length - 1].cac : null;
+    const currentPayback = payback.length > 0 ? payback[payback.length - 1].payback_months : null;
+    const currentRatio = (currentCac !== null && currentCac > 0 && currentLtv !== null) ? currentLtv / currentCac : null;
 
     const formatCurrency = (val: number) => 
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
 
-    const ltvDisplay = !isFinite(currentLtv) || isNaN(currentLtv) ? 'Very High' : formatCurrency(currentLtv);
-    const paybackDisplay = !isFinite(currentPayback) || isNaN(currentPayback) ? 'N/A' : `${currentPayback.toFixed(1)} mo`;
-    const ratioDisplay = !isFinite(currentRatio) || isNaN(currentRatio) ? 'N/A' : `${currentRatio.toFixed(1)}x`;
+    const ltvDisplay = currentLtv === null ? 'Infinite' : formatCurrency(currentLtv);
+    const cacDisplay = currentCac === null ? 'N/A' : formatCurrency(currentCac);
+    const paybackDisplay = currentPayback === null ? 'N/A' : `${currentPayback.toFixed(1)} mo`;
+    const ratioDisplay = currentRatio === null ? 'N/A' : `${currentRatio.toFixed(1)}x`;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -121,7 +122,7 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
             <div className="grid-cards">
                 {[
                     { label: 'Customer LTV', value: ltvDisplay, tip: 'Lifetime Value = ARPA × Gross Margin ÷ Churn Rate. Estimates total revenue from an average customer over their lifetime.' },
-                    { label: 'Customer CAC', value: formatCurrency(currentCac), tip: 'Customer Acquisition Cost = Marketing Spend ÷ New Customers acquired that month.' },
+                    { label: 'Customer CAC', value: cacDisplay, tip: 'Customer Acquisition Cost = Marketing Spend ÷ New Customers acquired that month.' },
                     { label: 'LTV:CAC Ratio', value: ratioDisplay, tip: 'Benchmark: >3× is healthy for B2B SaaS. Below 1× means you spend more to acquire than you recover.' },
                     { label: 'Payback Period', value: paybackDisplay, tip: 'Months to recover CAC from gross margin. Benchmark: <12 months for efficient SaaS growth.' },
                 ].map(({ label, value, tip }) => (
