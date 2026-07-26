@@ -24,23 +24,23 @@ export async function listMrrLog(
     limit: number = 50,
 ): Promise<MrrLogRow[]> {
     return await invoke<MrrLogRow[]>('mrr_log_list', {
-        workspaceId,
+        workspace_id: workspaceId,
         search,
-        sortBy,
-        sortDir,
+        sort_by: sortBy,
+        sort_dir: sortDir,
         offset,
         limit,
     });
 }
 
 export async function countMrrLog(workspaceId: string, search: string = ''): Promise<number> {
-    return await invoke<number>('mrr_log_count', { workspaceId, search });
+    return await invoke<number>('mrr_log_count', { workspace_id: workspaceId, search });
 }
 
 export async function addMrrLog(workspaceId: string, row: MrrLogAddPayload): Promise<void> {
-    return await invoke<void>('mrr_log_add', { workspaceId, row });
+    return await invoke<void>('mrr_log_add', { workspace_id: workspaceId, row });
 }
 
 export async function deleteMrrLog(workspaceId: string, rowid: number): Promise<MrrLogRow> {
-    return await invoke<MrrLogRow>('mrr_log_delete', { workspaceId, rowid });
+    return await invoke<MrrLogRow>('mrr_log_delete', { workspace_id: workspaceId, rowid });
 }

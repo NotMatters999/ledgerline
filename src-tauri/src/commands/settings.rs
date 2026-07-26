@@ -56,7 +56,7 @@ pub fn setting_get_f64(workspace_id: String, key: String, state: State<'_, AppSt
 }
 
 #[tauri::command]
-pub fn marketing_spend_add(_workspace_id: String, period: String, amount: f64, _channel: String, state: State<'_, AppState>) -> Result<(), String> {
+pub fn marketing_spend_add(_workspace_id: String, period: String, amount: f64, state: State<'_, AppState>) -> Result<(), String> {
     // Validation
     if amount < 0.0 {
         return Err("Marketing spend amount cannot be negative".into());

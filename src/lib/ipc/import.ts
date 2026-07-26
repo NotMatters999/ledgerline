@@ -22,9 +22,9 @@ export interface ValidationError {
 }
 
 export async function importPreview(workspaceId: string, filePath: string): Promise<PreviewResult> {
-    return await invoke<PreviewResult>('import_preview', { workspaceId, filePath });
+    return await invoke<PreviewResult>('import_preview', { _workspace_id: workspaceId, file_path: filePath });
 }
 
 export async function importCommit(workspaceId: string, filePath: string): Promise<void> {
-    return await invoke<void>('import_commit', { workspaceId, filePath });
+    return await invoke<void>('import_commit', { workspace_id: workspaceId, file_path: filePath });
 }

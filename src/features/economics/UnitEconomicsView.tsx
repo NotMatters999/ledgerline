@@ -64,7 +64,7 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
                 throw new Error("Please select a month");
             }
             
-            await addMarketingSpend(activeWorkspaceId, spendPeriodInput, amount, 'Total');
+            await addMarketingSpend(activeWorkspaceId, spendPeriodInput, amount);
             setSpendAmountInput('');
             await fetchData(activeWorkspaceId);
         } catch (err: any) {
