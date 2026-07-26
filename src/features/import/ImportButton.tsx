@@ -58,8 +58,10 @@ export const ImportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
             const rowCount = result.sample_normalized.length;
             setPhase({ tag: 'success', rowCount });
             // Refresh all data stores
-            fetchFinancials(activeWorkspaceId);
-            fetchCohort(activeWorkspaceId);
+            await Promise.all([
+                fetchFinancials(activeWorkspaceId),
+                fetchCohort(activeWorkspaceId),
+            ]);
         } catch (err: unknown) {
             setPhase({ tag: 'error', message: String(err) });
         }

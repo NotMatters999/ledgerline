@@ -25,7 +25,7 @@ pub fn backup_list(workspace_id: String, state: State<'_, AppState>) -> Result<V
     let mgr = state.workspace_manager.lock().unwrap();
     let workspaces = mgr.list_workspaces().map_err(LedgerlineError::from)?;
     let ws = workspaces.iter().find(|w| w.id == workspace_id).ok_or("Workspace not found")?;
-    state.backup_manager.list_backups(&ws.name).map_err(LedgerlineError::from)
+    state.backup_manager.list_backups(&ws.id).map_err(LedgerlineError::from)
 }
 
 #[tauri::command]
@@ -35,17 +35,18 @@ pub fn backup_create(_workspace_id: String, state: State<'_, AppState>) -> Resul
     let workspaces = mgr.list_workspaces().map_err(LedgerlineError::from)?;
     let ws = workspaces.iter().find(|w| w.id == _workspace_id).ok_or("Workspace not found")?;
     
-    let path = state.backup_manager.backup(&ws.db_path, &ws.name).map_err(LedgerlineError::from)?;
+    let path = state.backup_manager.backup(&ws.db_path, &ws.id).map_err(LedgerlineError::from)?;
     log_info("Backup", "Manual backup creation completed successfully");
-    Ok(path.file_name().unwrap().to_str().unwrap().to_string())
+    let filename = path.file_name().and_then(|n| n.to_str()).ok_or(LedgerlineError::from("Invalid backup filename"))?.to_string();
+    Ok(filename)
 }
 
 #[tauri::command]
-pub fn backup_restore_request(filename: String, token_store: State<'_, BackupTokenStore>) -> Result<String, LedgerlineError> {
-    log_info("Backup", &format!("Restore request initiated for {}", filename));
+pub fn backup_restore_request(workspace_id: String, filename: String, token_store: State<'_, BackupTokenStore>) -> Result<String, LedgerlineError> {
+    log_info("Backup", &format!("Restore request initiated for {} in workspace {}", filename, workspace_id));
     let token = Uuid::new_v4().to_string();
     let mut store = token_store.tokens.lock().unwrap();
-    store.insert(filename, token.clone());
+    store.insert(format!("{}::{}", workspace_id, filename), token.clone());
     Ok(token)
 }
 
@@ -53,24 +54,23 @@ pub fn backup_restore_request(filename: String, token_store: State<'_, BackupTok
 pub fn backup_restore_confirm(_workspace_id: String, filename: String, token: String, state: State<'_, AppState>, token_store: State<'_, BackupTokenStore>) -> Result<(), LedgerlineError> {
     {
         let mut store = token_store.tokens.lock().unwrap();
-        if let Some(expected_token) = store.get(&filename) {
+        let key = format!("{}::{}", _workspace_id, filename);
+        if let Some(expected_token) = store.get(&key) {
             if expected_token != &token {
                 return Err(LedgerlineError::from("Invalid confirmation token"));
             }
-            store.remove(&filename);
+            store.remove(&key);
         } else {
             return Err(LedgerlineError::from("No restore request found for this backup"));
         }
     }
     
     let mgr = state.workspace_manager.lock().unwrap();
-    // Connections are opened ephemerally by handlers, no need to explicitly close here.
     
     let workspaces = mgr.list_workspaces().map_err(LedgerlineError::from)?;
     let ws = workspaces.iter().find(|w| w.id == _workspace_id).ok_or("Workspace not found")?;
     
-    // Compute absolute path of the backup file using the backup manager's known app data dir
-    let backup_path = state.backup_manager.app_data_dir.join("backups").join(&ws.name).join(&filename);
+    let backup_path = state.backup_manager.app_data_dir.join("backups").join(&ws.id).join(&filename);
     
     if !backup_path.exists() {
         return Err(LedgerlineError::from("Backup file does not exist"));
@@ -107,7 +107,7 @@ mod tests {
         }
         
         // 2. Backup
-        let backup_file = bk_mgr.backup(&ws.db_path, "TestWS").unwrap();
+        let backup_file = bk_mgr.backup(&ws.db_path, &ws.id).unwrap();
         
         // 3. Mutate Database (simulate user error / destructive action)
         {

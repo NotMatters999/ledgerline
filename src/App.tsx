@@ -7,8 +7,6 @@ import { UnitEconomicsView } from "./features/economics/UnitEconomicsView";
 import { CustomerEconomicsView } from "./features/economics/CustomerEconomicsView";
 import { ForecastingView } from "./features/forecasting/ForecastingView";
 import { ChurnAnalyticsView } from "./features/churn/ChurnAnalyticsView";
-import { ExportButton } from "./features/export/ExportButton";
-import { ImportButton } from "./features/import/ImportButton";
 import { DocumentationView } from "./features/docs/DocumentationView";
 import { SettingsView } from "./features/settings/SettingsView";
 import { DataManagementView } from "./features/data/DataManagementView";
@@ -84,10 +82,7 @@ function App() {
               Settings
             </button>
 
-            <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
-            <ImportButton activeWorkspaceId={activeId} />
-            <ExportButton />
-          </div>
+            </div>
         </div>
       </nav>
 

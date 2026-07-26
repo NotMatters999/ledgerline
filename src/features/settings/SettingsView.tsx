@@ -23,6 +23,12 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
     const prefSaveTimer = useRef<number | null>(null);
 
     const fetchBackups = async () => {
+        if (!activeWorkspaceId) {
+            setBackups([]);
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
             setBackups(await listBackups(activeWorkspaceId));
@@ -69,10 +75,12 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
     };
 
     const handleRestoreRequest = async (filename: string) => {
+        if (!activeWorkspaceId) return;
         try {
             setActionError(null);
             setActionSuccess(null);
-            setPendingRestore({ filename, token: await requestRestore(filename) });
+            const token = await requestRestore(activeWorkspaceId, filename);
+            setPendingRestore({ filename, token });
         } catch (err: any) {
             setActionError(err.toString());
         }

@@ -97,7 +97,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                 setLastDeleted(null);
             }, 5000);
             await refreshRows(page);
-            fetchData(activeWorkspaceId);
+            await fetchData(activeWorkspaceId);
         } catch (e: any) {
             setError(e?.toString() ?? 'Delete failed');
         }
@@ -116,7 +116,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
             setLastDeleted(null);
             if (undoTimer.current) clearTimeout(undoTimer.current);
             await refreshRows(page);
-            fetchData(activeWorkspaceId);
+            await fetchData(activeWorkspaceId);
         } catch (e: any) {
             setError(e?.toString() ?? 'Undo failed');
         }
@@ -132,9 +132,9 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
             await addMrrLog(activeWorkspaceId, formData);
             setShowAddForm(false);
             setFormData({ customer_id: '', period: new Date().toISOString().slice(0, 10), mrr_amount: 0, currency: 'USD' });
-            await refreshRows(0);
             setPage(0);
-            fetchData(activeWorkspaceId);
+            await refreshRows(0);
+            await fetchData(activeWorkspaceId);
         } catch (e: any) {
             setFormError(e?.toString() ?? 'Add failed');
         } finally {

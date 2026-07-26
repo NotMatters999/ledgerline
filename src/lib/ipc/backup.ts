@@ -8,8 +8,8 @@ export async function createBackup(workspaceId: string): Promise<string> {
     return await invoke<string>('backup_create', { workspaceId });
 }
 
-export async function requestRestore(filename: string): Promise<string> {
-    return await invoke<string>('backup_restore_request', { filename });
+export async function requestRestore(workspaceId: string, filename: string): Promise<string> {
+    return await invoke<string>('backup_restore_request', { workspaceId, filename });
 }
 
 export async function confirmRestore(workspaceId: string, filename: string, token: string): Promise<void> {

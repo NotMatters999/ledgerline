@@ -8,6 +8,7 @@ interface Props {
 export const ExportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
     const [isExporting, setIsExporting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showMenu, setShowMenu] = useState(false);
 
     const handleCsvExport = async () => {
         setIsExporting(true);
@@ -22,6 +23,7 @@ export const ExportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
             setError(`CSV Export failed: ${err.toString()}`);
         } finally {
             setIsExporting(false);
+            setShowMenu(false);
         }
     };
 
@@ -37,6 +39,7 @@ export const ExportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
             setError(`PDF Export failed: ${err.toString()}`);
         } finally {
             setIsExporting(false);
+            setShowMenu(false);
         }
     };
 
@@ -46,20 +49,21 @@ export const ExportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
                 className="btn-primary"
                 disabled={!activeWorkspaceId || isExporting}
                 style={{ padding: '0.375rem 1rem' }}
+                onClick={() => setShowMenu((value) => !value)}
             >
                 {isExporting ? 'Exporting...' : 'Export Data'}
             </button>
             
-            {/* Dropdown Menu (visible on hover) */}
-            <div 
-                className="export-dropdown"
-                style={{
-                    position: 'absolute', right: 0, marginTop: '0.5rem', width: '12rem',
-                    background: 'rgba(21, 26, 35, 0.95)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-                    border: '1px solid var(--border-color)', borderRadius: '0.5rem',
-                    boxShadow: 'var(--shadow-lg)', zIndex: 50, display: 'flex', flexDirection: 'column'
-                }}
-            >
+            {showMenu && (
+                <div 
+                    className="export-dropdown"
+                    style={{
+                        position: 'absolute', right: 0, marginTop: '0.5rem', width: '12rem',
+                        background: 'rgba(21, 26, 35, 0.95)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                        border: '1px solid var(--border-color)', borderRadius: '0.5rem',
+                        boxShadow: 'var(--shadow-lg)', zIndex: 50, display: 'flex', flexDirection: 'column'
+                    }}
+                >
                 <button 
                     onClick={handleCsvExport}
                     disabled={!activeWorkspaceId || isExporting}
@@ -88,6 +92,7 @@ export const ExportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
                     Export as PDF
                 </button>
             </div>
+            )}
 
             {error && (
                 <div style={{
