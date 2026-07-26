@@ -68,9 +68,9 @@ pub fn generate_csv(conn: &Connection) -> Result<CsvExportResult, String> {
 }
 
 #[tauri::command]
-pub fn export_csv(_workspace_id: String, state: State<'_, AppState>) -> Result<CsvExportResult, LedgerlineError> {
+pub fn export_csv(workspace_id: String, state: State<'_, AppState>) -> Result<CsvExportResult, LedgerlineError> {
     log_info("Export", "Starting CSV export generation");
-    let conn = get_workspace_conn(&_workspace_id, &state).map_err(LedgerlineError::from)?;
+    let conn = get_workspace_conn(&workspace_id, &state).map_err(LedgerlineError::from)?;
     let result = generate_csv(&conn).map_err(LedgerlineError::from)?;
     log_info("Export", "CSV export generation completed successfully");
     Ok(result)
@@ -113,9 +113,9 @@ pub fn generate_pdf(conn: &Connection) -> Result<Vec<u8>, String> {
 }
 
 #[tauri::command]
-pub fn export_pdf(_workspace_id: String, state: State<'_, AppState>) -> Result<Vec<u8>, LedgerlineError> {
+pub fn export_pdf(workspace_id: String, state: State<'_, AppState>) -> Result<Vec<u8>, LedgerlineError> {
     log_info("Export", "Starting PDF export generation");
-    let conn = get_workspace_conn(&_workspace_id, &state).map_err(LedgerlineError::from)?;
+    let conn = get_workspace_conn(&workspace_id, &state).map_err(LedgerlineError::from)?;
     let buffer = generate_pdf(&conn).map_err(LedgerlineError::from)?;
     log_info("Export", "PDF export generation completed successfully");
     Ok(buffer)

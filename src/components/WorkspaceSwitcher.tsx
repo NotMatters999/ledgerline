@@ -15,6 +15,8 @@ export const WorkspaceSwitcher: React.FC<Props> = ({ onActiveIdChange }) => {
     const [renameValue, setRenameValue] = useState('');
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
+    const [hoveredId, setHoveredId] = useState<string | null>(null);
+    const [hoveredNew, setHoveredNew] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
     const activeWorkspace = workspaces.find(w => w.id === activeId);
@@ -212,12 +214,12 @@ export const WorkspaceSwitcher: React.FC<Props> = ({ onActiveIdChange }) => {
                                         display: 'flex', alignItems: 'center', gap: '0.25rem',
                                         borderRadius: '0.5rem', padding: '0.375rem 0.5rem',
                                         marginBottom: '2px',
-                                        background: ws.id === activeId ? 'rgba(16,185,129,0.1)' : 'transparent',
+                                        background: ws.id === activeId ? 'rgba(16,185,129,0.1)' : (hoveredId === ws.id ? 'rgba(255,255,255,0.04)' : 'transparent'),
                                         cursor: 'pointer',
                                         transition: 'background var(--transition-fast)',
                                     }}
-                                    onMouseEnter={e => { if (ws.id !== activeId) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
-                                    onMouseLeave={e => { if (ws.id !== activeId) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                                    onMouseEnter={() => setHoveredId(ws.id)}
+                                    onMouseLeave={() => setHoveredId(null)}
                                 >
                                     {/* Checkmark for active */}
                                     <span style={{ width: '14px', flexShrink: 0, fontSize: '0.7rem', color: 'var(--accent-primary)' }}>
@@ -289,19 +291,15 @@ export const WorkspaceSwitcher: React.FC<Props> = ({ onActiveIdChange }) => {
                                 onClick={() => setCreating(true)}
                                 style={{
                                     width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                    padding: '0.375rem 0.5rem', background: 'transparent', border: 'none',
-                                    color: 'var(--text-muted)', cursor: 'pointer', borderRadius: '0.5rem',
+                                    padding: '0.375rem 0.5rem', border: 'none',
+                                    color: hoveredNew ? 'var(--text-primary)' : 'var(--text-muted)',
+                                    background: hoveredNew ? 'rgba(255,255,255,0.04)' : 'transparent',
+                                    cursor: 'pointer', borderRadius: '0.5rem',
                                     fontSize: '0.8rem', fontFamily: 'var(--font-sans)',
                                     transition: 'all var(--transition-fast)',
                                 }}
-                                onMouseEnter={e => {
-                                    (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)';
-                                    (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)';
-                                }}
-                                onMouseLeave={e => {
-                                    (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)';
-                                    (e.currentTarget as HTMLElement).style.background = 'transparent';
-                                }}
+                                onMouseEnter={() => setHoveredNew(true)}
+                                onMouseLeave={() => setHoveredNew(false)}
                             >
                                 <span style={{ fontSize: '1rem', color: 'var(--accent-primary)', lineHeight: 1 }}>+</span>
                                 New Workspace

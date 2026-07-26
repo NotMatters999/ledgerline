@@ -129,7 +129,7 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
             Some(d) => d,
             None => {
                 validation_errors.push(ValidationError {
-                    row_number: i + 1,
+                    row_number: i + 2,
                     reason: format!("Invalid date format: {}", date_str),
                 });
                 continue;
@@ -140,7 +140,7 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
             Ok(a) => a,
             Err(e) => {
                 validation_errors.push(ValidationError {
-                    row_number: i + 1,
+                    row_number: i + 2,
                     reason: format!("Invalid amount: {}", e),
                 });
                 continue;
@@ -150,7 +150,7 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
         let date_iso = date.format("%Y-%m-%d").to_string();
         
         total_amount += amount;
-        normalized_rows.push((i + 1, (customer, date_iso, amount, currency, category)));
+        normalized_rows.push((i + 2, (customer, date_iso, amount, currency, category)));
     }
 
     let mut final_rows = Vec::with_capacity(normalized_rows.len());

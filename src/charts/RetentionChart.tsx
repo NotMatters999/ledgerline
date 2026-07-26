@@ -16,7 +16,7 @@ export const RetentionChart: React.FC<RetentionChartProps> = ({ data }) => {
             backgroundColor: 'transparent',
             tooltip: {
                 trigger: 'axis',
-                valueFormatter: (value: any) => `${value}%`
+                valueFormatter: (value: any) => value != null ? `${value}%` : '-'
             },
             legend: {
                 data: ['NRR', 'GRR'],

@@ -20,7 +20,7 @@ export const WaterfallView: React.FC<Props> = ({ activeWorkspaceId }) => {
         }
     }, [mrr, selectedMonth]);
 
-    if (isLoading && mrr.length === 0) {
+    if (isLoading) {
         return (
             <div className="flex-center" style={{ height: '100%', color: 'var(--text-primary)' }}>
                 <div className="spinner"></div>
@@ -28,7 +28,7 @@ export const WaterfallView: React.FC<Props> = ({ activeWorkspaceId }) => {
         );
     }
 
-    if (error && mrr.length === 0) {
+    if (error) {
         return (
             <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
                 <div className="glass-panel p-6" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>

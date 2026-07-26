@@ -21,16 +21,18 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
     useEffect(() => {
         if (activeWorkspaceId) {
             fetchData(activeWorkspaceId);
+            
+            getSettingF64(activeWorkspaceId, 'gross_margin')
+                .then(val => setGrossMarginInput((val * 100).toString()))
+                .catch(() => setGrossMarginInput('100'));
         }
+    }, [activeWorkspaceId, fetchData]);
 
-        getSettingF64(activeWorkspaceId, 'gross_margin')
-            .then(val => setGrossMarginInput((val * 100).toString()))
-            .catch(() => setGrossMarginInput('100'));
-
+    useEffect(() => {
         if (mrr.length > 0 && !spendPeriodInput) {
             setSpendPeriodInput(mrr[mrr.length - 1].month);
         }
-    }, [activeWorkspaceId, mrr.length, spendPeriodInput, fetchData]);
+    }, [mrr, spendPeriodInput]);
 
     const handleMarginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -74,7 +76,7 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
         }
     };
 
-    if (isLoading && ltv.length === 0) {
+    if (isLoading) {
         return (
             <div className="flex-center" style={{ height: '100%', color: 'var(--text-primary)' }}>
                 <div className="spinner"></div>
@@ -82,7 +84,7 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
         );
     }
 
-    if (error && ltv.length === 0) {
+    if (error) {
         return (
             <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
                 <div className="glass-panel p-6" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>

@@ -11,7 +11,7 @@ fn get_workspace_conn(workspace_id: &str, state: &State<'_, AppState>) -> Result
 }
 
 #[tauri::command]
-pub fn setting_set(_workspace_id: String, key: String, value: String, state: State<'_, AppState>) -> Result<(), String> {
+pub fn setting_set(workspace_id: String, key: String, value: String, state: State<'_, AppState>) -> Result<(), String> {
     // Validation
     if key == "gross_margin" {
         if let Ok(v) = value.parse::<f64>() {
@@ -23,7 +23,7 @@ pub fn setting_set(_workspace_id: String, key: String, value: String, state: Sta
         }
     }
 
-    let mut conn = get_workspace_conn(&_workspace_id, &state)?;
+    let mut conn = get_workspace_conn(&workspace_id, &state)?;
     
     // Atomic upsert: use a transaction so there is no gap between DELETE and INSERT
     let tx = conn.transaction().map_err(|e| e.to_string())?;
@@ -35,8 +35,8 @@ pub fn setting_set(_workspace_id: String, key: String, value: String, state: Sta
 }
 
 #[tauri::command]
-pub fn setting_get(_workspace_id: String, key: String, state: State<'_, AppState>) -> Result<String, String> {
-    let conn = get_workspace_conn(&_workspace_id, &state)?;
+pub fn setting_get(workspace_id: String, key: String, state: State<'_, AppState>) -> Result<String, String> {
+    let conn = get_workspace_conn(&workspace_id, &state)?;
     
     let mut stmt = conn.prepare("SELECT value FROM settings WHERE key = ? LIMIT 1").map_err(|e| e.to_string())?;
     let mut rows = stmt.query([&key]).map_err(|e| e.to_string())?;
@@ -56,7 +56,7 @@ pub fn setting_get_f64(workspace_id: String, key: String, state: State<'_, AppSt
 }
 
 #[tauri::command]
-pub fn marketing_spend_add(_workspace_id: String, period: String, amount: f64, state: State<'_, AppState>) -> Result<(), String> {
+pub fn marketing_spend_add(workspace_id: String, period: String, amount: f64, state: State<'_, AppState>) -> Result<(), String> {
     // Validation
     if amount < 0.0 {
         return Err("Marketing spend amount cannot be negative".into());
@@ -66,7 +66,7 @@ pub fn marketing_spend_add(_workspace_id: String, period: String, amount: f64, s
         return Err("Period must be a valid date in YYYY-MM-DD format".into());
     }
 
-    let conn = get_workspace_conn(&_workspace_id, &state)?;
+    let conn = get_workspace_conn(&workspace_id, &state)?;
     
     let month_key = period.chars().take(7).collect::<String>(); // YYYY-MM
 

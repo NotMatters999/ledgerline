@@ -29,11 +29,11 @@ pub fn backup_list(workspace_id: String, state: State<'_, AppState>) -> Result<V
 }
 
 #[tauri::command]
-pub fn backup_create(_workspace_id: String, state: State<'_, AppState>) -> Result<String, LedgerlineError> {
+pub fn backup_create(workspace_id: String, state: State<'_, AppState>) -> Result<String, LedgerlineError> {
     log_info("Backup", "Starting manual backup creation");
     let mgr = state.workspace_manager.lock().unwrap();
     let workspaces = mgr.list_workspaces().map_err(LedgerlineError::from)?;
-    let ws = workspaces.iter().find(|w| w.id == _workspace_id).ok_or("Workspace not found")?;
+    let ws = workspaces.iter().find(|w| w.id == workspace_id).ok_or("Workspace not found")?;
     
     let path = state.backup_manager.backup(&ws.db_path, &ws.id).map_err(LedgerlineError::from)?;
     log_info("Backup", "Manual backup creation completed successfully");
@@ -56,7 +56,7 @@ pub fn backup_restore_request(workspace_id: String, filename: String, token_stor
 }
 
 #[tauri::command]
-pub fn backup_restore_confirm(_workspace_id: String, filename: String, token: String, state: State<'_, AppState>, token_store: State<'_, BackupTokenStore>) -> Result<(), LedgerlineError> {
+pub fn backup_restore_confirm(workspace_id: String, filename: String, token: String, state: State<'_, AppState>, token_store: State<'_, BackupTokenStore>) -> Result<(), LedgerlineError> {
     let safe_filename = std::path::Path::new(&filename)
         .file_name()
         .and_then(|n| n.to_str())
@@ -64,7 +64,7 @@ pub fn backup_restore_confirm(_workspace_id: String, filename: String, token: St
 
     {
         let mut store = token_store.tokens.lock().unwrap();
-        let key = format!("{}::{}", _workspace_id, safe_filename);
+        let key = format!("{}::{}", workspace_id, safe_filename);
         if let Some(expected_token) = store.get(&key) {
             if expected_token != &token {
                 return Err(LedgerlineError::from("Invalid confirmation token"));
@@ -78,7 +78,7 @@ pub fn backup_restore_confirm(_workspace_id: String, filename: String, token: St
     let mgr = state.workspace_manager.lock().unwrap();
     
     let workspaces = mgr.list_workspaces().map_err(LedgerlineError::from)?;
-    let ws = workspaces.iter().find(|w| w.id == _workspace_id).ok_or("Workspace not found")?;
+    let ws = workspaces.iter().find(|w| w.id == workspace_id).ok_or("Workspace not found")?;
     
     let backup_path = state.backup_manager.app_data_dir.join("backups").join(&ws.id).join(safe_filename);
     
@@ -144,5 +144,19 @@ mod tests {
             let sum: i64 = conn.query_row("SELECT SUM(id) FROM data", [], |row| row.get(0)).unwrap();
             assert_eq!(sum, 3); // 1 + 2 = 3
         }
+    }
+
+    #[test]
+    fn test_path_traversal_rejection() {
+        let malicious_input = "../../../etc/shadow.bak";
+        
+        let safe_filename = std::path::Path::new(malicious_input)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .ok_or(crate::utils::error::LedgerlineError::from("Invalid or malicious backup filename"));
+            
+        assert!(safe_filename.is_ok());
+        // Path::new("../../../etc/shadow.bak").file_name() extracts "shadow.bak", stripping the directory traversal!
+        assert_eq!(safe_filename.unwrap(), "shadow.bak");
     }
 }
