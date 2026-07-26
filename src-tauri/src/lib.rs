@@ -30,14 +30,27 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(move |app| {
-            let app_data_dir = app.path().app_data_dir().unwrap();
-            
+            // Resolve an app data dir but avoid panicking if the platform API returns None.
+            let app_data_dir = app.path().app_data_dir().unwrap_or_else(|| {
+                let fallback = std::env::temp_dir().join("ledgerline_appdata");
+                let _ = std::fs::create_dir_all(&fallback);
+                fallback
+            });
+
             // Initialize Logger
             Logger::init(app_data_dir.clone());
-            
-            let workspace_manager = WorkspaceManager::new(&app_data_dir).unwrap();
+
+            // Initialize workspace manager, fail setup gracefully if it cannot be created
+            let workspace_manager = match WorkspaceManager::new(&app_data_dir) {
+                Ok(mgr) => mgr,
+                Err(e) => {
+                    utils::logger::log_info("System", &format!("Failed to initialize workspace manager: {}", e));
+                    return Err(e.into());
+                }
+            };
+
             let backup_manager = BackupManager::new(&app_data_dir);
-            
+
             app.manage(AppState {
                 workspace_manager: std::sync::Mutex::new(workspace_manager),
                 backup_manager,
