@@ -171,14 +171,12 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
 
     let tx = conn.transaction()?;
 
-    let mut stmt = tx.prepare("SELECT file_hash, fingerprint, row_count, total_amount FROM import_history")?;
+    let mut stmt = tx.prepare("SELECT file_hash, fingerprint FROM import_history")?;
     let mut rows = stmt.query([])?;
     
     while let Some(row) = rows.next()? {
         let h: String = row.get(0)?;
         let fp: String = row.get(1)?;
-        let rc: i64 = row.get(2)?;
-        let ta: f64 = row.get(3)?;
 
         if h == f_hash && !f_hash.is_empty() {
             return Err(ImportError::DuplicateFileHash);
