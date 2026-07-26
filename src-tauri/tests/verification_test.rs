@@ -108,7 +108,7 @@ fn test_fix2_financial_engines_and_reactivation() {
     // CAC: Jan spend=1000, new_customers=3 → CAC=333.33
     let cac = calculate_cac(&conn).unwrap();
     let expected_jan_cac = 1000.0 / 3.0;
-    assert!((cac[0].cac - expected_jan_cac).abs() < 0.01, "Jan CAC = 1000/3 = {:.2}, got {:.2}", expected_jan_cac, cac[0].cac);
+    assert!((cac[0].cac.unwrap() - expected_jan_cac).abs() < 0.01, "Jan CAC = 1000/3 = {:.2}, got {:.2}", expected_jan_cac, cac[0].cac.unwrap());
 
     // LTV: gross_margin from monthly_assumptions
     let ltv = calculate_ltv(&conn).unwrap();
@@ -159,7 +159,6 @@ fn test_fix1_backup_system_roundtrip() {
     // 2. Seed real data — MUST run migrations first so mrr_log exists
     {
         let mut conn = ledgerline_lib::db::connection::open_connection(&ws.db_path).unwrap();
-        run_migrations(&mut conn).unwrap();
         conn.execute_batch("
             INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('Z', '2024-01-01', 999.0, 'USD');
         ").unwrap();
