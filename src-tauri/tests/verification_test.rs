@@ -85,10 +85,11 @@ fn test_fix2_financial_engines_and_reactivation() {
     assert_eq!(feb.ending, 200.0, "Feb ending: 280-180+50+50");
 
     let mar = &mrr[2];
-    // Mar: A returns after 1 calendar month (Jan→Mar = diff_months=2, <=2 → Expansion in code)
+    // Mar: A returns after 1 calendar month (Jan→Mar).
+    // With the new math fix, this is properly Reactivation, not Expansion!
     // C churns. B flat.
-    assert_eq!(mar.expansion, 100.0, "A returned exactly 1 calendar month gap → Expansion in code (diff_months=2<=2)");
-    assert_eq!(mar.reactivation, 0.0, "No reactivation in Mar");
+    assert_eq!(mar.expansion, 0.0, "No expansion in Mar");
+    assert_eq!(mar.reactivation, 100.0, "A returned exactly 1 calendar month gap → Reactivation");
     assert_eq!(mar.churn, 50.0, "C churns in Mar");
     assert_eq!(mar.ending, 250.0, "Mar ending: 200-50+100=250");
 

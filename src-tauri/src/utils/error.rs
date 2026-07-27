@@ -1,4 +1,3 @@
-use serde::Serialize;
 use std::fmt;
 use crate::utils::logger::log_error;
 
