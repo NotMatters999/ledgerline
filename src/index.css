@@ -229,6 +229,12 @@ body {
   padding: 0.25rem;
   border-radius: 0.75rem;
   border: 1px solid var(--border-color);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.nav-menu::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-item {

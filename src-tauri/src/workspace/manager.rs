@@ -128,6 +128,10 @@ impl WorkspaceManager {
         workspaces.push(workspace.clone());
         self.save_workspaces(&workspaces)?;
 
+        // Initialize DB schema for this new workspace synchronously
+        // This prevents race conditions from concurrent frontend data fetches.
+        crate::db::connection::open_connection(&db_path).map_err(|e| WorkspaceError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+
         Ok(workspace)
     }
 
