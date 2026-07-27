@@ -130,7 +130,7 @@ impl WorkspaceManager {
 
         // Initialize DB schema for this new workspace synchronously
         // This prevents race conditions from concurrent frontend data fetches.
-        crate::db::connection::open_connection(&db_path).map_err(|e| WorkspaceError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+        crate::db::connection::open_connection(&workspace.db_path).map_err(|e| WorkspaceError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
 
         Ok(workspace)
     }
