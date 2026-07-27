@@ -33,7 +33,7 @@ pub fn calculate_cac(conn: &Connection) -> Result<Vec<CacMovement>, duckdb::Erro
 
     for m in mrr_data {
         let month_key = m.month.chars().take(7).collect::<String>(); // YYYY-MM
-        let spend = spend_by_month.get(&month_key).cloned().unwrap_or(0.0);
+        let spend = spend_by_month.get(&month_key).copied().unwrap_or(0.0);
         let mut cac = None;
         
         if m.new_customers > 0 {

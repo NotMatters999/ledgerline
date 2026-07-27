@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { ForecastMovement } from '../../lib/ipc/engines';
+import { ForecastMovement, getForecast } from '../../lib/ipc/engines';
 import { ForecastChart } from '../../charts/ForecastChart';
 import { MetricCard } from '../dashboard/MetricCard';
 
@@ -17,17 +16,14 @@ export const ForecastingView: React.FC<{ activeWorkspaceId: string }> = ({ activ
 
     const debounceRef = useRef<number | null>(null);
 
-    const fetchForecast = async (churn: number, exp: number, newM: number) => {
+    const fetchForecast = React.useCallback(async (churn: number, exp: number, newM: number) => {
         const startTime = performance.now();
         
         try {
-            const data = await invoke<ForecastMovement[]>('forecast_get', {
-                workspaceId: activeWorkspaceId,
-                params: {
-                    monthly_churn_rate: churn / 100.0,
-                    monthly_expansion_rate: exp / 100.0,
-                    new_mrr_per_month: newM
-                }
+            const data = await getForecast(activeWorkspaceId, {
+                monthly_churn_rate: churn / 100.0,
+                monthly_expansion_rate: exp / 100.0,
+                new_mrr_per_month: newM
             });
             
             const endTime = performance.now();
@@ -44,7 +40,7 @@ export const ForecastingView: React.FC<{ activeWorkspaceId: string }> = ({ activ
         } catch (err: any) {
             setError(err.toString());
         }
-    };
+    }, [activeWorkspaceId]);
 
     useEffect(() => {
         // Debounce real-time inputs
@@ -59,7 +55,7 @@ export const ForecastingView: React.FC<{ activeWorkspaceId: string }> = ({ activ
         return () => {
             if (debounceRef.current) window.clearTimeout(debounceRef.current);
         };
-    }, [activeWorkspaceId, churnRate, expansionRate, newMrr]);
+    }, [churnRate, expansionRate, newMrr, fetchForecast]);
 
     const formatCurrency = (val: number) => 
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);

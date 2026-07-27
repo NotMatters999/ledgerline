@@ -48,8 +48,8 @@ pub fn calculate_mrr(conn: &Connection) -> Result<Vec<MrrMovement>, duckdb::Erro
     }
 
     // Generate continuous sequence of months
-    let min_month = *data_by_month.keys().next().unwrap();
-    let max_month = *data_by_month.keys().last().unwrap();
+    let min_month = data_by_month.keys().next().copied().unwrap();
+    let max_month = data_by_month.keys().last().copied().unwrap();
     
     let mut current = min_month;
     let mut months = Vec::new();
@@ -81,8 +81,8 @@ pub fn calculate_mrr(conn: &Connection) -> Result<Vec<MrrMovement>, duckdb::Erro
         customers_to_check.extend(current_month_data.keys().cloned());
 
         for cust in customers_to_check {
-            let prev = prev_mrr_state.get(&cust).cloned().unwrap_or(0.0);
-            let curr = current_month_data.get(&cust).cloned().unwrap_or(0.0);
+            let prev = prev_mrr_state.get(&cust).copied().unwrap_or(0.0);
+            let curr = current_month_data.get(&cust).copied().unwrap_or(0.0);
 
             movement.beginning += prev;
             movement.ending += curr;
@@ -92,19 +92,9 @@ pub fn calculate_mrr(conn: &Connection) -> Result<Vec<MrrMovement>, duckdb::Erro
                 movement.ending_customers += 1;
                 
                 if prev == 0.0 {
-                    if let Some(last_active) = last_active_month.get(&cust) {
-                        // Calculate month difference
-                        let diff_years = month.year() - last_active.year();
-                        let diff_months = diff_years * 12 + month.month() as i32 - last_active.month() as i32;
-                        
-                        // If diff_months is 2, it means 1 full calendar month gap (e.g. Dec to Feb)
-                        if diff_months <= 2 {
-                            movement.expansion += curr;
-                            movement.new_customers += 1; // Need to add logo back since it was removed during churn
-                        } else {
-                            movement.reactivation += curr;
-                            movement.new_customers += 1;
-                        }
+                    if let Some(_last_active) = last_active_month.get(&cust) {
+                        movement.reactivation += curr;
+                        movement.new_customers += 1;
                     } else {
                         movement.new += curr;
                         movement.new_customers += 1;

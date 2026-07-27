@@ -24,7 +24,7 @@ pub enum ImportError {
     DuplicateFileHash,
     #[error("Duplicate dataset fingerprint detected. Data already imported.")]
     DuplicateFingerprint,
-    #[error("Validation failed for one or more rows.")]
+    #[error("Validation failed for one or more rows: {0:?}")]
     Validation(Vec<ValidationError>),
 }
 
@@ -48,13 +48,10 @@ pub fn preview(path: &Path) -> Result<PreviewResult, ImportError> {
     let parsed = parse_file(path)?;
     let mapped = detect_columns(&parsed.headers);
 
-    if !mapped.is_complete() {
-        return Err(ImportError::MissingColumns(mapped.clone()));
-    }
-
-    let customer_idx = mapped.customer_id_idx.unwrap();
-    let date_idx = mapped.date_idx.unwrap();
-    let amount_idx = mapped.revenue_idx.unwrap();
+    let (customer_idx, date_idx, amount_idx) = match (mapped.customer_id_idx, mapped.date_idx, mapped.revenue_idx) {
+        (Some(c), Some(d), Some(a)) => (c, d, a),
+        _ => return Err(ImportError::MissingColumns(mapped.clone())),
+    };
 
     let sample_rows: Vec<&Vec<String>> = parsed.rows.iter().take(50).collect();
     
@@ -96,13 +93,10 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
     let parsed = parse_file(path)?;
     let mapped = detect_columns(&parsed.headers);
 
-    if !mapped.is_complete() {
-        return Err(ImportError::MissingColumns(mapped.clone()));
-    }
-
-    let customer_idx = mapped.customer_id_idx.unwrap();
-    let date_idx = mapped.date_idx.unwrap();
-    let amount_idx = mapped.revenue_idx.unwrap();
+    let (customer_idx, date_idx, amount_idx) = match (mapped.customer_id_idx, mapped.date_idx, mapped.revenue_idx) {
+        (Some(c), Some(d), Some(a)) => (c, d, a),
+        _ => return Err(ImportError::MissingColumns(mapped.clone())),
+    };
 
     let date_samples: Vec<String> = parsed.rows.iter().take(50).map(|r| r.get(date_idx).cloned().unwrap_or_default()).collect();
     let format = detect_date_format(&date_samples)?;

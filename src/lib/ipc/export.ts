@@ -14,7 +14,7 @@ export async function exportPdf(workspaceId: string): Promise<number[]> {
     return await invoke<number[]>('export_pdf', { workspace_id: workspaceId });
 }
 
-export function downloadBlob(content: string | Uint8Array, filename: string, mimeType: string) {
+export function downloadBlob(content: string | Uint8Array | number[], filename: string, mimeType: string) {
     let finalContent = content;
     if (mimeType === 'application/pdf' && Array.isArray(content)) {
         finalContent = new Uint8Array(content);

@@ -25,7 +25,7 @@ pub fn calculate_forecast(conn: &Connection, params: &ForecastParams) -> Result<
     
     let mut baseline_mrr = 0.0;
     let today = Utc::now().date_naive();
-    let mut last_date = NaiveDate::from_ymd_opt(today.year(), today.month(), 1).unwrap();
+    let mut last_date = NaiveDate::from_ymd_opt(today.year(), today.month(), 1).unwrap_or_default();
 
     if let Some(last_movement) = mrr_data.last() {
         baseline_mrr = last_movement.ending;
@@ -45,7 +45,7 @@ pub fn calculate_forecast(conn: &Connection, params: &ForecastParams) -> Result<
             m = 1;
             y += 1;
         }
-        current_date = NaiveDate::from_ymd_opt(y, m, 1).unwrap();
+        current_date = NaiveDate::from_ymd_opt(y, m, 1).unwrap_or_default();
 
         let churn = current_mrr * params.monthly_churn_rate;
         let expansion = current_mrr * params.monthly_expansion_rate;

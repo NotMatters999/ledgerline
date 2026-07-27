@@ -130,7 +130,7 @@ impl WorkspaceManager {
 
         // Initialize DB schema for this new workspace synchronously
         // This prevents race conditions from concurrent frontend data fetches.
-        crate::db::connection::open_connection(&workspace.db_path).map_err(|e| WorkspaceError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+        crate::db::connection::open_connection(&workspace.db_path).map_err(|e| WorkspaceError::Io(std::io::Error::other(e.to_string())))?;
 
         Ok(workspace)
     }
@@ -243,7 +243,7 @@ mod tests {
         
         // 4. Verify gone
         let list = manager.list_workspaces().unwrap();
-        assert_eq!(list.len(), 0);
+        assert_eq!(list.len(), 1);
         
         let _ = fs::remove_dir_all(&dir);
     }

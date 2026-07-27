@@ -33,9 +33,9 @@ export const RetentionView: React.FC<Props> = ({ activeWorkspaceId }) => {
         );
     }
 
-    const currentNrr = (retention.length > 0 && retention[retention.length - 1].nrr !== null) ? retention[retention.length - 1].nrr! * 100 : null;
-    const currentGrr = (retention.length > 0 && retention[retention.length - 1].grr !== null) ? retention[retention.length - 1].grr! * 100 : null;
-    const currentLogo = (retention.length > 0 && retention[retention.length - 1].logo_retention !== null) ? retention[retention.length - 1].logo_retention! * 100 : null;
+    const currentNrr = (retention.length > 0 && retention[retention.length - 1].nrr != null) ? retention[retention.length - 1].nrr! * 100 : null;
+    const currentGrr = (retention.length > 0 && retention[retention.length - 1].grr != null) ? retention[retention.length - 1].grr! * 100 : null;
+    const currentLogo = (retention.length > 0 && retention[retention.length - 1].logo_retention != null) ? retention[retention.length - 1].logo_retention! * 100 : null;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

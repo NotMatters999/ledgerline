@@ -16,7 +16,7 @@ export const LtvCacChart: React.FC<LtvCacChartProps> = ({ ltvData, cacData }) =>
         // Match CAC data to LTV months
         const cac = months.map(m => {
             const match = cacData.find(c => c.month.startsWith(m));
-            return match ? match.cac : 0;
+            return match ? match.cac : null;
         });
 
         return {

@@ -100,6 +100,6 @@ mod tests {
         
         let mut stmt = conn.prepare("SELECT MAX(version) FROM schema_version").unwrap();
         let version: i32 = stmt.query_row([], |row| row.get(0)).unwrap();
-        assert_eq!(version, 3);
+        assert_eq!(version, 4);
     }
 }

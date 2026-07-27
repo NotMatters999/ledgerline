@@ -22,7 +22,7 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
     const [prefError, setPrefError] = useState<string | null>(null);
     const prefSaveTimer = useRef<number | null>(null);
 
-    const fetchBackups = async () => {
+    const fetchBackups = useCallback(async () => {
         if (!activeWorkspaceId) {
             setBackups([]);
             setLoading(false);
@@ -37,7 +37,7 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
         } finally {
             setLoading(false);
         }
-    };
+    }, [activeWorkspaceId]);
 
     const loadPreferences = useCallback(async () => {
         const [gm, fx, df] = await Promise.allSettled([
@@ -60,7 +60,7 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
                 window.clearTimeout(prefSaveTimer.current);
             }
         };
-    }, [activeWorkspaceId, loadPreferences]);
+    }, [fetchBackups, loadPreferences]);
 
     const handleCreateBackup = async () => {
         try {

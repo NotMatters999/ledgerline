@@ -32,12 +32,12 @@ pub fn generate_csv(conn: &Connection) -> Result<CsvExportResult, String> {
     // MRR CSV
     let mut mrr_wtr = WriterBuilder::new().from_writer(vec![]);
     for row in &mrr_data { mrr_wtr.serialize(row).map_err(|e| e.to_string())?; }
-    let mrr_csv = String::from_utf8(mrr_wtr.into_inner().unwrap()).unwrap();
+    let mrr_csv = String::from_utf8(mrr_wtr.into_inner().map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
 
     // Retention CSV
     let mut ret_wtr = WriterBuilder::new().from_writer(vec![]);
     for row in &ret_data { ret_wtr.serialize(row).map_err(|e| e.to_string())?; }
-    let retention_csv = String::from_utf8(ret_wtr.into_inner().unwrap()).unwrap();
+    let retention_csv = String::from_utf8(ret_wtr.into_inner().map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
 
     // Cohorts CSV
     let mut coh_wtr = WriterBuilder::new().from_writer(vec![]);
@@ -62,7 +62,7 @@ pub fn generate_csv(conn: &Connection) -> Result<CsvExportResult, String> {
             }).map_err(|e| e.to_string())?;
         }
     }
-    let cohorts_csv = String::from_utf8(coh_wtr.into_inner().unwrap()).unwrap();
+    let cohorts_csv = String::from_utf8(coh_wtr.into_inner().map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
 
     Ok(CsvExportResult { mrr_csv, retention_csv, cohorts_csv })
 }

@@ -291,9 +291,9 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                     </thead>
                     <tbody>
                         {isLoading ? (
-                            <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading…</td></tr>
+                            <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading…</td></tr>
                         ) : rows.length === 0 ? (
-                            <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No records found{search ? ' matching your search' : '. Import CSV or Excel data to get started.'}</td></tr>
+                            <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No records found{search ? ' matching your search' : '. Import CSV or Excel data to get started.'}</td></tr>
                         ) : rows.map(row => (
                             <tr
                                 key={row.rowid}

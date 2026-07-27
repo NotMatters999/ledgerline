@@ -2,9 +2,18 @@ use serde::Serialize;
 use std::fmt;
 use crate::utils::logger::log_error;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct LedgerlineError {
     pub message: String,
+}
+
+impl serde::Serialize for LedgerlineError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.message)
+    }
 }
 
 impl fmt::Display for LedgerlineError {
