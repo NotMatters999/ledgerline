@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS mrr_log (
     period DATE NOT NULL,
     mrr_amount DOUBLE NOT NULL,
     currency VARCHAR,
+    category VARCHAR,
     PRIMARY KEY (customer_id, period)
 );
 

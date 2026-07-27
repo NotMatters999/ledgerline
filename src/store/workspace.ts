@@ -64,9 +64,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         let newActiveId = state.activeId;
         if (state.activeId === id) {
             newActiveId = remaining.length > 0 ? remaining[0].id : '';
-            if (newActiveId) {
-                await switchWorkspace(newActiveId);
-            }
+            await switchWorkspace(newActiveId);
         }
         set({ workspaces: remaining, activeId: newActiveId });
     },

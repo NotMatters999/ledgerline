@@ -16,10 +16,10 @@ LedgerLine uses standardized SaaS formulas to compute metrics.
 ### MRR (Monthly Recurring Revenue)
 MRR is computed dynamically by summing active, recognized revenue for a given month.
 - **New MRR**: First time a customer pays > $0.
-- **Expansion MRR**: Customer pays more than the previous month (or returns after exactly 1 month of churn).
+- **Expansion MRR**: Customer pays more than the previous month.
 - **Contraction MRR**: Customer pays less than the previous month, but > $0.
 - **Churn MRR**: Customer pays $0 after previously paying > $0.
-- **Reactivation MRR**: Customer pays > $0 after skipping two or more full calendar months.
+- **Reactivation MRR**: Customer pays > $0 after previously churning (i.e., skipping one or more full calendar months).
 
 ### Retention
 - **Gross Retention Rate (GRR)**: \`(Beginning MRR - Contraction - Churn) / Beginning MRR\`

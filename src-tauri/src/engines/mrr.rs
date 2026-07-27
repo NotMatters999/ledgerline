@@ -91,18 +91,21 @@ pub fn calculate_mrr(conn: &Connection) -> Result<Vec<MrrMovement>, duckdb::Erro
                 next_mrr_state.insert(cust.clone(), curr);
                 movement.ending_customers += 1;
                 
-                if prev == 0.0 {
-                    if let Some(_last_active) = last_active_month.get(&cust) {
+                if let Some(&last_active) = last_active_month.get(&cust) {
+                    let gap_months = (month.year() - last_active.year()) * 12 + (month.month() as i32 - last_active.month() as i32);
+                    
+                    if gap_months == 1 {
+                        if curr > prev {
+                            movement.expansion += curr - prev;
+                        } else if curr < prev {
+                            movement.contraction += prev - curr; 
+                        }
+                    } else if gap_months >= 2 {
                         movement.reactivation += curr;
-                        movement.new_customers += 1;
-                    } else {
-                        movement.new += curr;
-                        movement.new_customers += 1;
                     }
-                } else if curr > prev {
-                    movement.expansion += curr - prev;
-                } else if curr < prev {
-                    movement.contraction += prev - curr; 
+                } else {
+                    movement.new += curr;
+                    movement.new_customers += 1;
                 }
                 
                 last_active_month.insert(cust.clone(), month);
