@@ -15,9 +15,11 @@ export async function exportPdf(workspaceId: string): Promise<number[]> {
 }
 
 export function downloadBlob(content: string | Uint8Array | number[], filename: string, mimeType: string) {
-    let finalContent = content;
-    if (mimeType === 'application/pdf' && Array.isArray(content)) {
+    let finalContent: string | Uint8Array;
+    if (Array.isArray(content)) {
         finalContent = new Uint8Array(content);
+    } else {
+        finalContent = content;
     }
     const blob = new Blob([finalContent], { type: mimeType });
     const url = URL.createObjectURL(blob);

@@ -1,11 +1,6 @@
 use serde::Serialize;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ColumnType {
-    CustomerId,
-    Revenue,
-    Date,
-}
+
 
 #[derive(Debug, Clone, Serialize)]
 pub struct MappedColumns {

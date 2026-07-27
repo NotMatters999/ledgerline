@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useCohortStore } from '../../store/cohort';
 import { CoreChart } from '../../charts/CoreChart';
+import { CohortRow, CohortCell } from '../../lib/ipc/engines';
 
 type MetricType = 'revenue' | 'customers';
 type ValueType = 'percentage' | 'absolute';
@@ -21,27 +22,27 @@ export const CohortView: React.FC<{ activeWorkspaceId: string }> = ({ activeWork
         const trailingRows = data.rows.slice(-12);
         
         // Y-axis categories (Join months) — reversed so newest cohort is at the top
-        const yCategories = trailingRows.map((r: any) => r.join_month.substring(0, 7)).reverse();
+        const yCategories = trailingRows.map((r: CohortRow) => r.join_month.substring(0, 7)).reverse();
         
         // X-axis categories (Months since join, max 12)
-        const maxMonths = Math.min(12, trailingRows.reduce((max, r: any) => {
-            const rowMax = r.data.reduce((m: number, d: any) => Math.max(m, d.month_index), 0);
+        const maxMonths = Math.min(12, trailingRows.reduce((max: number, r: CohortRow) => {
+            const rowMax = r.data.reduce((m: number, d: CohortCell) => Math.max(m, d.month_index), 0);
             return Math.max(max, rowMax);
         }, 0));
         const xCategories = Array.from({ length: maxMonths + 1 }, (_, i) => `Month ${i}`);
 
         // Format data into [x, y, value]
-        const heatmapData: any[] = [];
+        const heatmapData: [number, number, number, string][] = [];
         let maxValue = 0;
 
         // Iterate in reverse order (newest first) so yIndex 0 = newest cohort = yCategories[0]
         const reversedRows = [...trailingRows].reverse();
-        reversedRows.forEach((row: any, yIndex: number) => {
+        reversedRows.forEach((row: CohortRow, yIndex: number) => {
             const initialRev = row.new_revenue;
             const initialCust = row.new_customers;
 
             for (let xIndex = 0; xIndex <= maxMonths; xIndex++) {
-                const cell = row.data.find((d: any) => d.month_index === xIndex);
+                const cell = row.data.find((d: CohortCell) => d.month_index === xIndex);
                 if (!cell) continue;
 
                 let val = 0;

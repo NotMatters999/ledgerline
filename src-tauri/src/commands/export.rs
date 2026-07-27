@@ -81,10 +81,8 @@ pub fn generate_pdf(conn: &Connection) -> Result<Vec<u8>, String> {
     use genpdf::{Document, SimplePageDecorator};
     
     let font_bytes = include_bytes!("../../assets/fonts/arial.ttf").to_vec();
-    let font_data = match genpdf::fonts::FontData::new(font_bytes, None) {
-        Ok(data) => data,
-        Err(_) => return Err("Failed to parse embedded Arial font data".to_string()),
-    };
+    let font_data = genpdf::fonts::FontData::new(font_bytes, None)
+        .map_err(|_| "Failed to parse embedded Arial font data".to_string())?;
     
     let font_family = genpdf::fonts::FontFamily {
         regular: font_data.clone(),

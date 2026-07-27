@@ -133,10 +133,10 @@ mod tests {
         // Actually LTV engine defaults to 1.0 if setting missing
         let ltv1 = calculate_ltv(&conn).unwrap();
         let mar_ltv1 = &ltv1[1]; // Index 1 is Mar
-        assert_eq!(mar_ltv1.arpa, 112.5);
-        assert_eq!(mar_ltv1.churn_rate, 1.0/3.0);
+        assert!((mar_ltv1.arpa - 112.5).abs() < 1e-5);
+        assert!((mar_ltv1.churn_rate - 1.0/3.0).abs() < 1e-5);
         // LTV = (112.5 * 1.0) / (1/3) = 337.5
-        assert_eq!(mar_ltv1.ltv.unwrap(), 337.5);
+        assert!((mar_ltv1.ltv.unwrap() - 337.5).abs() < 1e-5);
 
         // 2. Set Gross Margin to 0.50
         conn.execute("INSERT INTO settings (key, value) VALUES (?, ?)", ["gross_margin", "0.50"]).unwrap();
@@ -144,7 +144,7 @@ mod tests {
         let ltv2 = calculate_ltv(&conn).unwrap();
         let mar_ltv2 = &ltv2[1];
         // LTV = (112.5 * 0.5) / (1/3) = 168.75
-        assert_eq!(mar_ltv2.ltv.unwrap(), 168.75);
+        assert!((mar_ltv2.ltv.unwrap() - 168.75).abs() < 1e-5);
 
         // 3. Marketing Spend and Payback
         // Payback = CAC / (ARPA * margin)

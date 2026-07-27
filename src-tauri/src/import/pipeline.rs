@@ -77,7 +77,10 @@ pub fn preview(path: &Path) -> Result<PreviewResult, ImportError> {
             Some(d) => d,
             None => continue,
         };
-        let amount = clean_currency(&amount_str)?;
+        let amount = match clean_currency(&amount_str) {
+            Ok(a) => a,
+            Err(_) => continue,
+        };
 
         sample_normalized.push((customer, date.format("%Y-%m-%d").to_string(), amount, currency, category));
     }
