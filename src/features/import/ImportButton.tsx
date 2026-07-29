@@ -51,7 +51,7 @@ export const ImportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
 
     const onCommit = async () => {
         if (phase.tag !== 'preview') return;
-        const { filePath, result } = phase;
+        const { filePath } = phase;
         setPhase({ tag: 'committing' });
         try {
             const rowCount = await importCommit(activeWorkspaceId, filePath);
