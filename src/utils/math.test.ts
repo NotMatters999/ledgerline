@@ -1,4 +1,5 @@
 import { validateMrrAmount } from './math';
+import { describe, it, expect } from 'vitest';
 
 describe('validateMrrAmount', () => {
     it('throws error on empty string', () => {

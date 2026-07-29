@@ -28,9 +28,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
 
     // Delete row state
     const [deletingRow, setDeletingRow] = useState<{ rowid: number; token: string } | null>(null);
-    const [lastDeleted, setLastDeleted] = useState<MrrLogRow | null>(null);
-    const [undoVisible, setUndoVisible] = useState(false);
-    const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
 
     // Add row form
     const [showAddForm, setShowAddForm] = useState(false);
@@ -142,13 +140,6 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
 
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-    useEffect(() => {
-        return () => {
-            if (undoTimer.current) {
-                clearTimeout(undoTimer.current);
-            }
-        };
-    }, []);
 
     const SortArrow = ({ col }: { col: string }) => (
         <span style={{ marginLeft: 4, opacity: sortBy === col ? 1 : 0.3, fontSize: '0.75rem' }}>
