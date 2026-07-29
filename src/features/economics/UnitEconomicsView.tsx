@@ -3,6 +3,7 @@ import { useFinancialsStore } from '../../store/financials';
 
 import { LtvCacChart } from '../../charts/LtvCacChart';
 import { setSetting, getSettingF64, addMarketingSpend } from '../../lib/ipc/settings';
+import { percentToDecimal, decimalToPercent } from '../../utils/math';
 import { Tooltip } from '../../components/Tooltip';
 
 
@@ -23,7 +24,7 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
             fetchData(activeWorkspaceId);
             
             getSettingF64(activeWorkspaceId, 'gross_margin')
-                .then(val => setGrossMarginInput((Math.round(val * 10000) / 100).toString()))
+                .then(val => setGrossMarginInput(decimalToPercent(val)))
                 .catch(() => setGrossMarginInput('100'));
         }
     }, [activeWorkspaceId, fetchData]);
@@ -43,7 +44,7 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
             if (isNaN(percentage) || percentage < 0 || percentage > 100) {
                 throw new Error("Gross margin must be between 0 and 100");
             }
-            const decimal = Math.round(percentage * 100) / 10000;
+            const decimal = percentToDecimal(percentage);
             await setSetting(activeWorkspaceId, 'gross_margin', decimal.toString());
             await fetchData(activeWorkspaceId);
         } catch (err: any) {

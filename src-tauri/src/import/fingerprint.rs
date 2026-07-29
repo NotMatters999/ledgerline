@@ -17,6 +17,9 @@ fn update_prefixed(hasher: &mut Sha256, val: &str) {
 }
 
 pub fn dataset_fingerprint(normalized_rows: &[(String, String, f64, String, String)]) -> String {
+    // Note: The hashing algorithm was updated to use length-prefixed encoding 
+    // to prevent delimiter collision attacks. Fingerprints computed under the 
+    // old delimiter-based scheme are not comparable to new ones.
     let mut hasher = Sha256::new();
     for row in normalized_rows {
         update_prefixed(&mut hasher, &row.0);

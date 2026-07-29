@@ -12,6 +12,7 @@ import { useFinancialsStore } from '../../store/financials';
 import { ImportButton } from '../import/ImportButton';
 import { ExportButton } from '../export/ExportButton';
 import { InlineConfirm } from '../../components/InlineConfirm';
+import { validateMrrAmount } from '../../utils/math';
 
 const PAGE_SIZE = 50;
 
@@ -121,9 +122,10 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
         setSubmitting(true);
         setFormError(null);
         try {
+            const parsedAmount = validateMrrAmount(formData.mrr_amount);
             const payload: MrrLogAddPayload = {
                 ...formData,
-                mrr_amount: parseFloat(formData.mrr_amount) || 0,
+                mrr_amount: parsedAmount,
             };
             await addMrrLog(activeWorkspaceId, payload);
             setShowAddForm(false);

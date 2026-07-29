@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { listBackups, createBackup, requestRestore, confirmRestore } from '../../lib/ipc/backup';
 import { getSetting, setSetting } from '../../lib/ipc/settings';
+import { percentToDecimal, decimalToPercent } from '../../utils/math';
 
 type ActiveTab = 'backups' | 'preferences';
 
@@ -48,7 +49,7 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
 
         if (gm.status === 'fulfilled') {
             const parsed = parseFloat(gm.value);
-            setGrossMargin((Math.round(parsed * 10000) / 100).toString());
+            setGrossMargin(decimalToPercent(parsed));
         }
         if (fx.status === 'fulfilled') setFxRate(fx.value);
         if (df.status === 'fulfilled') setDateFormat(df.value);
@@ -113,7 +114,7 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
             if (!dateFormat.trim()) throw new Error('Date format cannot be empty');
 
             await Promise.all([
-                setSetting(activeWorkspaceId, 'gross_margin', (gm / 100).toString()),
+                setSetting(activeWorkspaceId, 'gross_margin', percentToDecimal(gm).toString()),
                 setSetting(activeWorkspaceId, 'fx_rate', fx.toString()),
                 setSetting(activeWorkspaceId, 'date_format', dateFormat.trim()),
             ]);
