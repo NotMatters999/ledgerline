@@ -245,7 +245,7 @@ fn test_migration_cache_and_restore_interaction() {
     let token_store = SecureTokenStore::new();
 
     let ws = {
-        let mut mgr = app_state.workspace_manager.lock().unwrap();
+        let mgr = app_state.workspace_manager.lock().unwrap();
         mgr.create_workspace("Migration Test WS").unwrap()
     };
     
