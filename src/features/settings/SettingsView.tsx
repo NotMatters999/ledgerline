@@ -46,7 +46,10 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
             getSetting(activeWorkspaceId, 'date_format'),
         ]);
 
-        if (gm.status === 'fulfilled') setGrossMargin((parseFloat(gm.value) * 100).toFixed(0));
+        if (gm.status === 'fulfilled') {
+            const parsed = parseFloat(gm.value);
+            setGrossMargin((Math.round(parsed * 10000) / 100).toString());
+        }
         if (fx.status === 'fulfilled') setFxRate(fx.value);
         if (df.status === 'fulfilled') setDateFormat(df.value);
     }, [activeWorkspaceId]);

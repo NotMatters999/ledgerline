@@ -14,7 +14,7 @@ fn get_workspace_conn(workspace_id: &str, state: &State<'_, AppState>) -> Result
     let mgr = state.workspace_manager.lock().unwrap();
     let workspaces = mgr.list_workspaces().map_err(|e| e.to_string())?;
     let ws = workspaces.iter().find(|w| w.id == workspace_id).ok_or("Workspace not found")?;
-    crate::db::connection::open_connection(&ws.db_path).map_err(|e| e.to_string())
+    crate::db::connection::open_connection(&ws.db_path, Some(workspace_id)).map_err(|e| e.to_string())
 }
 
 #[derive(Serialize)]
@@ -68,7 +68,7 @@ pub fn generate_csv(conn: &Connection) -> Result<CsvExportResult, String> {
 }
 
 #[tauri::command]
-pub fn export_csv(workspace_id: String, state: State<'_, AppState>) -> Result<CsvExportResult, LedgerlineError> {
+pub fn csv_export(workspace_id: String, state: State<'_, AppState>) -> Result<CsvExportResult, LedgerlineError> {
     log_info("Export", "Starting CSV export generation");
     let conn = get_workspace_conn(&workspace_id, &state).map_err(LedgerlineError::from)?;
     let result = generate_csv(&conn).map_err(LedgerlineError::from)?;
@@ -111,7 +111,7 @@ pub fn generate_pdf(conn: &Connection) -> Result<Vec<u8>, String> {
 }
 
 #[tauri::command]
-pub fn export_pdf(workspace_id: String, state: State<'_, AppState>) -> Result<Vec<u8>, LedgerlineError> {
+pub fn pdf_export(workspace_id: String, state: State<'_, AppState>) -> Result<Vec<u8>, LedgerlineError> {
     log_info("Export", "Starting PDF export generation");
     let conn = get_workspace_conn(&workspace_id, &state).map_err(LedgerlineError::from)?;
     let buffer = generate_pdf(&conn).map_err(LedgerlineError::from)?;

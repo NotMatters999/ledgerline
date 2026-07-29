@@ -30,7 +30,7 @@ pub fn import_commit(workspace_id: String, file_path: String, state: State<'_, A
         return Err(LedgerlineError::from(ImportError::Parser(crate::import::parser::ParserError::Io(std::io::Error::other(format!("Failed to create safety snapshot: {}", e))))));
     }
 
-    let mut conn = open_connection(&db_path).map_err(LedgerlineError::from)?;
+    let mut conn = open_connection(&db_path, Some(&ws_id)).map_err(LedgerlineError::from)?;
     commit(&mut conn, PathBuf::from(file_path).as_path()).map_err(LedgerlineError::from)?;
     
     log_info("Import", "Import commit completed successfully");

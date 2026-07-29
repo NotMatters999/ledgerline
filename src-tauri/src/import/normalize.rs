@@ -97,13 +97,50 @@ pub fn clean_currency(s: &str) -> Result<f64, NormalizeError> {
     let s = s.trim();
     if s.is_empty() { return Ok(0.0); }
     
-    let cleaned: String = s.chars()
-        .filter(|c| c.is_ascii_digit() || *c == '.' || *c == '-')
-        .collect();
+    // Determine sign: standard minus or accounting parentheses e.g. (1,234.56)
+    let is_negative = s.contains('-') || (s.starts_with('(') && s.ends_with(')'));
+    
+    let has_comma = s.contains(',');
+    let has_dot = s.contains('.');
+    
+    let is_european = if has_comma && has_dot {
+        s.rfind(',') > s.rfind('.')
+    } else if has_comma {
+        let parts: Vec<&str> = s.split(',').collect();
+        let last_digits: String = parts.last().unwrap().chars().filter(|c| c.is_ascii_digit()).collect();
+        if last_digits.len() == 3 {
+            return Err(NormalizeError::InvalidAmount(format!("Ambiguous format (thousands or decimal?): {}", s)));
+        }
+        true // Decimal comma
+    } else if has_dot {
+        let parts: Vec<&str> = s.split('.').collect();
+        let last_digits: String = parts.last().unwrap().chars().filter(|c| c.is_ascii_digit()).collect();
+        if last_digits.len() == 3 {
+            return Err(NormalizeError::InvalidAmount(format!("Ambiguous format (thousands or decimal?): {}", s)));
+        }
+        false // Decimal dot
+    } else {
+        false
+    };
+
+    let cleaned: String = if is_european {
+        s.chars()
+            .filter(|&c| c.is_ascii_digit() || c == ',')
+            .map(|c| if c == ',' { '.' } else { c })
+            .collect()
+    } else {
+        s.chars()
+            .filter(|&c| c.is_ascii_digit() || c == '.')
+            .collect()
+    };
     
     if cleaned.is_empty() { return Ok(0.0); }
     
-    cleaned.parse::<f64>().map_err(|_| NormalizeError::InvalidAmount(s.to_string()))
+    let mut val = cleaned.parse::<f64>().map_err(|_| NormalizeError::InvalidAmount(s.to_string()))?;
+    if is_negative {
+        val = -val;
+    }
+    Ok(val)
 }
 
 #[cfg(test)]
@@ -115,6 +152,18 @@ mod tests {
         assert_eq!(clean_currency("$1,234.56").unwrap(), 1234.56);
         assert_eq!(clean_currency("- 500").unwrap(), -500.0);
         assert_eq!(clean_currency("100.00 USD").unwrap(), 100.0);
+        
+        // European formats
+        assert_eq!(clean_currency("1.234,56 €").unwrap(), 1234.56);
+        assert_eq!(clean_currency("100,50").unwrap(), 100.5);
+        assert_eq!(clean_currency("-1.000,00").unwrap(), -1000.0);
+        
+        // Accounting negative format
+        assert_eq!(clean_currency("(1,234.56)").unwrap(), -1234.56);
+        
+        // Ambiguous formats (exactly 3 digits after only separator)
+        assert!(matches!(clean_currency("1.234"), Err(NormalizeError::InvalidAmount(_))));
+        assert!(matches!(clean_currency("1,234"), Err(NormalizeError::InvalidAmount(_))));
     }
 
     #[test]

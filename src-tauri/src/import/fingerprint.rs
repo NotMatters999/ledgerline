@@ -10,19 +10,20 @@ pub fn file_hash(path: &Path) -> Result<String, std::io::Error> {
     Ok(format!("{:x}", result))
 }
 
+fn update_prefixed(hasher: &mut Sha256, val: &str) {
+    let bytes = val.as_bytes();
+    hasher.update(&(bytes.len() as u64).to_be_bytes());
+    hasher.update(bytes);
+}
+
 pub fn dataset_fingerprint(normalized_rows: &[(String, String, f64, String, String)]) -> String {
     let mut hasher = Sha256::new();
     for row in normalized_rows {
-        hasher.update(row.0.as_bytes());
-        hasher.update(b"|");
-        hasher.update(row.1.as_bytes());
-        hasher.update(b"|");
-        hasher.update(row.2.to_string().as_bytes());
-        hasher.update(b"|");
-        hasher.update(row.3.as_bytes());
-        hasher.update(b"|");
-        hasher.update(row.4.as_bytes());
-        hasher.update(b"|");
+        update_prefixed(&mut hasher, &row.0);
+        update_prefixed(&mut hasher, &row.1);
+        update_prefixed(&mut hasher, &row.2.to_string());
+        update_prefixed(&mut hasher, &row.3);
+        update_prefixed(&mut hasher, &row.4);
     }
     let result = hasher.finalize();
     format!("{:x}", result)
@@ -49,5 +50,20 @@ mod tests {
         ];
         let fp3 = dataset_fingerprint(&rows_diff);
         assert_ne!(fp1, fp3);
+    }
+
+    #[test]
+    fn test_collision_prevention() {
+        // Old logic using `|` would hash these two identically
+        let rows1 = vec![
+            ("A|B".to_string(), "C".to_string(), 100.0, "USD".to_string(), "SaaS".to_string()),
+        ];
+        let rows2 = vec![
+            ("A".to_string(), "B|C".to_string(), 100.0, "USD".to_string(), "SaaS".to_string()),
+        ];
+        
+        let fp1 = dataset_fingerprint(&rows1);
+        let fp2 = dataset_fingerprint(&rows2);
+        assert_ne!(fp1, fp2, "Fingerprints should not collide when fields contain delimiters");
     }
 }

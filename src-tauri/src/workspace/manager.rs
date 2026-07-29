@@ -52,7 +52,6 @@ impl serde::Serialize for WorkspaceError {
 pub struct WorkspaceManager {
     workspaces_json_path: PathBuf,
     workspaces_dir: PathBuf,
-    delete_tokens: Mutex<HashMap<String, String>>,
 }
 
 impl WorkspaceManager {
@@ -75,7 +74,6 @@ impl WorkspaceManager {
         let manager = Self {
             workspaces_json_path,
             workspaces_dir,
-            delete_tokens: Mutex::new(HashMap::new()),
         };
 
         if is_new {
@@ -122,12 +120,14 @@ impl WorkspaceManager {
             db_path,
         };
 
-        workspaces.push(workspace.clone());
-        self.save_workspaces(&workspaces)?;
-
         // Initialize DB schema for this new workspace synchronously
         // This prevents race conditions from concurrent frontend data fetches.
-        crate::db::connection::open_connection(&workspace.db_path).map_err(|e| WorkspaceError::Io(std::io::Error::other(e.to_string())))?;
+        crate::db::connection::open_connection(&workspace.db_path, Some(&workspace.id))
+            .map_err(|e| WorkspaceError::Io(std::io::Error::other(e.to_string())))?;
+
+        // Only persist to workspaces.json after successful DB creation and migration
+        workspaces.push(workspace.clone());
+        self.save_workspaces(&workspaces)?;
 
         Ok(workspace)
     }
@@ -158,36 +158,26 @@ impl WorkspaceManager {
         Err(WorkspaceError::NotFound(id.to_string()))
     }
 
-    pub fn request_delete(&self, id: &str) -> Result<String, WorkspaceError> {
-        let workspaces = self.list_workspaces()?;
-        if !workspaces.iter().any(|w| w.id == id) {
-            return Err(WorkspaceError::NotFound(id.to_string()));
-        }
-
-        let token = Uuid::new_v4().to_string();
-        let mut tokens = self.delete_tokens.lock().unwrap();
-        tokens.insert(token.clone(), id.to_string());
-        
-        Ok(token)
-    }
-
-    pub fn confirm_delete(&self, token: &str) -> Result<(), WorkspaceError> {
-        let id = {
-            let mut tokens = self.delete_tokens.lock().unwrap();
-            tokens.remove(token).ok_or(WorkspaceError::InvalidDeleteToken)?
-        };
-
+    pub fn delete_workspace(&self, id: &str) -> Result<(), WorkspaceError> {
         let mut workspaces = self.list_workspaces()?;
         let pos = workspaces.iter().position(|w| w.id == id)
-            .ok_or_else(|| WorkspaceError::NotFound(id.clone()))?;
+            .ok_or_else(|| WorkspaceError::NotFound(id.to_string()))?;
         
-        let ws = workspaces.remove(pos);
-        self.save_workspaces(&workspaces)?;
+        let ws = &workspaces[pos];
         
         if ws.db_path.exists() {
-            let _ = fs::remove_file(&ws.db_path);
+            fs::remove_file(&ws.db_path).map_err(|e| WorkspaceError::Io(e))?;
         }
-        remove_duckdb_wal(&ws.db_path);
+        
+        let mut wal_os = ws.db_path.as_os_str().to_os_string();
+        wal_os.push(".wal");
+        let wal = PathBuf::from(wal_os);
+        if wal.exists() {
+            fs::remove_file(wal).map_err(|e| WorkspaceError::Io(e))?;
+        }
+        
+        workspaces.remove(pos);
+        self.save_workspaces(&workspaces)?;
         
         Ok(())
     }
@@ -223,24 +213,18 @@ mod tests {
     }
 
     #[test]
-    fn test_delete_roundtrip() {
+    fn test_delete_workspace() {
         let dir = get_test_dir();
         let manager = WorkspaceManager::new(&dir).unwrap();
         
         let ws = manager.create_workspace("Test").unwrap();
         
-        // 1. Delete confirm with fake token fails
-        assert!(matches!(manager.confirm_delete("fake_token"), Err(WorkspaceError::InvalidDeleteToken)));
-        
-        // 2. Request delete
-        let token = manager.request_delete(&ws.id).unwrap();
-        
-        // 3. Confirm delete
-        manager.confirm_delete(&token).unwrap();
+        // 2. Request delete is now handled by tokens separately, so just call delete_workspace
+        manager.delete_workspace(&ws.id).unwrap();
         
         // 4. Verify gone
         let list = manager.list_workspaces().unwrap();
-        assert_eq!(list.len(), 1);
+        assert_eq!(list.len(), 0);
         
         let _ = fs::remove_dir_all(&dir);
     }
@@ -261,12 +245,69 @@ mod tests {
         };
         fs::write(&wal1, "wal").unwrap();
 
-        let token = manager.request_delete(&ws.id).unwrap();
-        manager.confirm_delete(&token).unwrap();
+        manager.delete_workspace(&ws.id).unwrap();
 
         assert!(!ws.db_path.exists(), "Workspace DB file should be removed");
         assert!(!wal1.exists(), "DuckDB WAL should be removed");
 
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_delete_workspace_preserves_metadata_on_failure() {
+        let dir = get_test_dir();
+        let manager = WorkspaceManager::new(&dir).unwrap();
+        let mut ws = manager.create_workspace("Test Failure").unwrap();
+        
+        // Sabotage the DB path to point to a directory, which fs::remove_file will refuse to delete
+        let bad_path = dir.join("unwritable_dir");
+        fs::create_dir(&bad_path).unwrap();
+        
+        ws.db_path = bad_path.clone();
+        
+        // Manually update the JSON so the manager sees the bad path
+        let mut workspaces = manager.list_workspaces().unwrap();
+        let pos = workspaces.iter().position(|w| w.id == ws.id).unwrap();
+        workspaces[pos] = ws.clone();
+        manager.save_workspaces(&workspaces).unwrap();
+        
+        // Attempt delete
+        let res = manager.delete_workspace(&ws.id);
+        assert!(matches!(res, Err(WorkspaceError::Io(_))), "Should return IO error because remove_file on a directory fails");
+        
+        // Verify JSON still has the workspace
+        let list = manager.list_workspaces().unwrap();
+        assert_eq!(list.len(), 1, "Workspace entry must NOT be deleted if file deletion fails");
+        
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_create_workspace_rollback_on_migration_failure() {
+        let dir = get_test_dir();
+        let manager = WorkspaceManager::new(&dir).unwrap();
+        
+        let initial_list = manager.list_workspaces().unwrap();
+        assert_eq!(initial_list.len(), 1, "Should have only Default Workspace initially");
+        
+        // Sabotage by deleting the workspaces directory and creating a FILE in its place.
+        // This will guarantee that `Connection::open` inside `create_workspace` fails,
+        // because it cannot create a `.duckdb` file inside another file.
+        let workspaces_dir = dir.join("workspaces");
+        fs::remove_dir_all(&workspaces_dir).unwrap();
+        fs::write(&workspaces_dir, "not a directory").unwrap();
+        
+        // Attempt create
+        let res = manager.create_workspace("Test Rollback");
+        assert!(res.is_err(), "Creation should fail due to IO error");
+        
+        // Verify JSON has NO NEW entries
+        let list = manager.list_workspaces().unwrap();
+        assert_eq!(list.len(), 1, "workspaces.json should not contain the failed workspace");
+        assert_eq!(list[0].id, initial_list[0].id, "Only the default workspace should remain");
+        
+        // Clean up our sabotage so the directory can be deleted
+        let _ = fs::remove_file(&workspaces_dir);
         let _ = fs::remove_dir_all(&dir);
     }
 }

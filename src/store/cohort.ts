@@ -6,6 +6,7 @@ interface CohortState {
     error: string | null;
     data: CohortData | null;
     fetchData: (workspaceId: string) => Promise<void>;
+    clear: () => void;
 }
 
 export const useCohortStore = create<CohortState>((set) => ({
@@ -21,5 +22,7 @@ export const useCohortStore = create<CohortState>((set) => ({
         } catch (error: any) {
             set({ error: error.toString(), isLoading: false });
         }
-    }
+    },
+    
+    clear: () => set({ data: null, error: null, isLoading: false })
 }));

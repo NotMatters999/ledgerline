@@ -43,6 +43,10 @@ export async function addMrrLog(workspaceId: string, row: MrrLogAddPayload): Pro
     return await invoke<void>('mrr_log_add', { workspace_id: workspaceId, row });
 }
 
-export async function deleteMrrLog(workspaceId: string, rowid: number): Promise<MrrLogRow> {
-    return await invoke<MrrLogRow>('mrr_log_delete', { workspace_id: workspaceId, rowid });
+export async function requestDeleteMrrLog(workspaceId: string, rowid: number): Promise<string> {
+    return await invoke<string>('mrr_log_delete_request', { workspace_id: workspaceId, rowid });
+}
+
+export async function confirmDeleteMrrLog(workspaceId: string, rowid: number, token: string): Promise<MrrLogRow> {
+    return await invoke<MrrLogRow>('mrr_log_delete_confirm', { workspace_id: workspaceId, rowid, token });
 }

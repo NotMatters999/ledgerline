@@ -3,13 +3,15 @@ import {
     listMrrLog,
     countMrrLog,
     addMrrLog,
-    deleteMrrLog,
+    requestDeleteMrrLog,
+    confirmDeleteMrrLog,
     MrrLogRow,
     MrrLogAddPayload,
 } from '../../lib/ipc/data';
 import { useFinancialsStore } from '../../store/financials';
 import { ImportButton } from '../import/ImportButton';
 import { ExportButton } from '../export/ExportButton';
+import { InlineConfirm } from '../../components/InlineConfirm';
 
 const PAGE_SIZE = 50;
 
@@ -23,17 +25,18 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Undo last deletion
+    // Delete row state
+    const [deletingRow, setDeletingRow] = useState<{ rowid: number; token: string } | null>(null);
     const [lastDeleted, setLastDeleted] = useState<MrrLogRow | null>(null);
     const [undoVisible, setUndoVisible] = useState(false);
     const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Add row form
     const [showAddForm, setShowAddForm] = useState(false);
-    const [formData, setFormData] = useState<MrrLogAddPayload>({
+    const [formData, setFormData] = useState({
         customer_id: '',
         period: new Date().toISOString().slice(0, 10),
-        mrr_amount: 0,
+        mrr_amount: '0',
         currency: 'USD',
         category: 'Standard',
     });
@@ -85,44 +88,31 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
         setPage(0);
     };
 
-    const handleDelete = async (row: MrrLogRow) => {
+    const handleRequestDelete = async (row: MrrLogRow) => {
         if (!activeWorkspaceId) return;
+        try {
+            const token = await requestDeleteMrrLog(activeWorkspaceId, row.rowid);
+            setDeletingRow({ rowid: row.rowid, token });
+        } catch (e: any) {
+            setError(e?.toString() ?? 'Delete request failed');
+        }
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!activeWorkspaceId || !deletingRow) return;
 
         try {
-            const deleted = await deleteMrrLog(activeWorkspaceId, row.rowid);
-            setLastDeleted(deleted);
-            setUndoVisible(true);
-            if (undoTimer.current) clearTimeout(undoTimer.current);
-            undoTimer.current = setTimeout(() => {
-                setUndoVisible(false);
-                setLastDeleted(null);
-            }, 5000);
+            await confirmDeleteMrrLog(activeWorkspaceId, deletingRow.rowid, deletingRow.token);
+            setDeletingRow(null);
             await refreshRows(page);
             await fetchData(activeWorkspaceId);
         } catch (e: any) {
             setError(e?.toString() ?? 'Delete failed');
+            setDeletingRow(null);
         }
     };
 
-    const handleUndo = async () => {
-        if (!lastDeleted || !activeWorkspaceId) return;
-        try {
-            await addMrrLog(activeWorkspaceId, {
-                customer_id: lastDeleted.customer_id,
-                period: lastDeleted.period,
-                mrr_amount: lastDeleted.mrr_amount,
-                currency: lastDeleted.currency,
-                category: lastDeleted.category,
-            });
-            setUndoVisible(false);
-            setLastDeleted(null);
-            if (undoTimer.current) clearTimeout(undoTimer.current);
-            await refreshRows(page);
-            await fetchData(activeWorkspaceId);
-        } catch (e: any) {
-            setError(e?.toString() ?? 'Undo failed');
-        }
-    };
+    // Undo logic removed for 2-step strict delete
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -131,9 +121,13 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
         setSubmitting(true);
         setFormError(null);
         try {
-            await addMrrLog(activeWorkspaceId, formData);
+            const payload: MrrLogAddPayload = {
+                ...formData,
+                mrr_amount: parseFloat(formData.mrr_amount) || 0,
+            };
+            await addMrrLog(activeWorkspaceId, payload);
             setShowAddForm(false);
-            setFormData({ customer_id: '', period: new Date().toISOString().slice(0, 10), mrr_amount: 0, currency: 'USD', category: 'Standard' });
+            setFormData({ customer_id: '', period: new Date().toISOString().slice(0, 10), mrr_amount: '0', currency: 'USD', category: 'Standard' });
             setPage(0);
             await refreshRows(0);
             await fetchData(activeWorkspaceId);
@@ -221,7 +215,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                                     value={(formData as any)[key]}
                                     onChange={e => setFormData(prev => ({
                                         ...prev,
-                                        [key]: type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value,
+                                        [key]: e.target.value,
                                     }))}
                                     required
                                     style={{
@@ -243,21 +237,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                 </div>
             )}
 
-            {/* Undo toast */}
-            {undoVisible && lastDeleted && (
-                <div style={{
-                    position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)',
-                    background: 'rgba(16,185,129,0.15)', backdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(16,185,129,0.4)', borderRadius: '0.75rem',
-                    padding: '0.875rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem',
-                    color: 'var(--text-primary)', zIndex: 1000, boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-                }}>
-                    <span style={{ fontSize: '0.875rem' }}>Deleted <strong>{lastDeleted.customer_id}</strong> ({lastDeleted.period})</span>
-                    <button onClick={handleUndo} className="nav-item active" style={{ padding: '0.375rem 1rem', borderRadius: '0.375rem', fontSize: '0.8rem' }}>
-                        Undo
-                    </button>
-                </div>
-            )}
+            {/* Undo toast removed for strict 2-step delete */}
 
             {/* Error */}
             {error && (
@@ -293,7 +273,14 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                         {isLoading ? (
                             <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading…</td></tr>
                         ) : rows.length === 0 ? (
-                            <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No records found{search ? ' matching your search' : '. Import CSV or Excel data to get started.'}</td></tr>
+                            <tr>
+                                <td colSpan={6} style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        No records found{search ? ' matching your search' : '. Import CSV or Excel data to get started.'}
+                                    </div>
+                                    {!search && <ImportButton activeWorkspaceId={activeWorkspaceId} />}
+                                </td>
+                            </tr>
                         ) : rows.map(row => (
                             <tr
                                 key={row.rowid}
@@ -309,19 +296,34 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                                 <td style={{ padding: '0.625rem 1rem', color: 'var(--text-muted)' }}>{row.currency}</td>
                                 <td style={{ padding: '0.625rem 1rem', color: 'var(--text-muted)' }}>{row.category || '—'}</td>
                                 <td style={{ padding: '0.625rem 1rem', textAlign: 'right' }}>
-                                    <button
-                                        onClick={() => handleDelete(row)}
-                                        title="Delete row"
-                                        style={{
-                                            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
-                                            color: 'var(--status-danger)', borderRadius: '0.375rem', padding: '0.25rem 0.625rem',
-                                            cursor: 'pointer', fontSize: '0.75rem', transition: 'background 0.15s'
-                                        }}
-                                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.2)')}
-                                        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.1)')}
-                                    >
-                                        Delete
-                                    </button>
+                                    {deletingRow?.rowid === row.rowid ? (
+                                        <InlineConfirm
+                                            message="Delete?"
+                                            confirmText="Confirm"
+                                            cancelText="Cancel"
+                                            onConfirm={handleConfirmDelete}
+                                            onCancel={() => {
+                                                // Cancel discards the state. The requested token is not 
+                                                // explicitly released; it will simply expire via its 5-minute TTL.
+                                                // This is an intentional security design (fail-closed).
+                                                setDeletingRow(null);
+                                            }}
+                                        />
+                                    ) : (
+                                        <button
+                                            onClick={() => handleRequestDelete(row)}
+                                            title="Delete row"
+                                            style={{
+                                                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+                                                color: 'var(--status-danger)', borderRadius: '0.375rem', padding: '0.25rem 0.625rem',
+                                                cursor: 'pointer', fontSize: '0.75rem', transition: 'background 0.15s'
+                                            }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.2)')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.1)')}
+                                        >
+                                            Delete
+                                        </button>
+                                    )}
                                 </td>
                             </tr>
                         ))}

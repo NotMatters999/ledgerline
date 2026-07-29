@@ -6,7 +6,7 @@ fn get_workspace_conn(workspace_id: &str, state: &State<'_, AppState>) -> Result
     let mgr = state.workspace_manager.lock().unwrap();
     let workspaces = mgr.list_workspaces().map_err(|e| e.to_string())?;
     let ws = workspaces.iter().find(|w| w.id == workspace_id).ok_or("Workspace not found")?;
-    crate::db::connection::open_connection(&ws.db_path).map_err(|e| e.to_string())
+    crate::db::connection::open_connection(&ws.db_path, Some(workspace_id)).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

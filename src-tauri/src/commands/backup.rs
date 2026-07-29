@@ -6,19 +6,7 @@ use crate::commands::workspace::AppState;
 use crate::utils::error::LedgerlineError;
 use crate::utils::logger::log_info;
 
-// Basic in-memory store for confirmation tokens
-#[derive(Default)]
-pub struct BackupTokenStore {
-    pub tokens: Mutex<HashMap<String, String>>, // filename -> token
-}
 
-impl BackupTokenStore {
-    pub fn new() -> Self {
-        Self {
-            tokens: Mutex::new(HashMap::new()),
-        }
-    }
-}
 
 #[tauri::command]
 pub fn backup_list(workspace_id: String, state: State<'_, AppState>) -> Result<Vec<String>, LedgerlineError> {
@@ -41,39 +29,37 @@ pub fn backup_create(workspace_id: String, state: State<'_, AppState>) -> Result
     Ok(filename)
 }
 
-#[tauri::command]
-pub fn backup_restore_request(workspace_id: String, filename: String, token_store: State<'_, BackupTokenStore>) -> Result<String, LedgerlineError> {
+pub fn core_backup_restore_request(workspace_id: String, filename: String, token_store: &crate::utils::token_store::SecureTokenStore) -> Result<String, LedgerlineError> {
     let safe_filename = std::path::Path::new(&filename)
         .file_name()
         .and_then(|n| n.to_str())
         .ok_or(LedgerlineError::from("Invalid or malicious backup filename"))?;
         
     log_info("Backup", &format!("Restore request initiated for {} in workspace {}", safe_filename, workspace_id));
-    let token = Uuid::new_v4().to_string();
-    let mut store = token_store.tokens.lock().unwrap();
-    store.insert(format!("{}::{}", workspace_id, safe_filename), token.clone());
+    
+    let token = token_store.mint(crate::utils::token_store::ActionType::RestoreBackup { 
+        workspace_id: workspace_id.clone(), 
+        filename: safe_filename.to_string() 
+    });
+    
     Ok(token)
 }
 
 #[tauri::command]
-pub fn backup_restore_confirm(workspace_id: String, filename: String, token: String, state: State<'_, AppState>, token_store: State<'_, BackupTokenStore>) -> Result<(), LedgerlineError> {
+pub fn backup_restore_request(workspace_id: String, filename: String, token_store: State<'_, crate::utils::token_store::SecureTokenStore>) -> Result<String, LedgerlineError> {
+    core_backup_restore_request(workspace_id, filename, &*token_store)
+}
+
+pub fn core_backup_restore_confirm(workspace_id: String, filename: String, token: String, state: &AppState, token_store: &crate::utils::token_store::SecureTokenStore) -> Result<(), LedgerlineError> {
     let safe_filename = std::path::Path::new(&filename)
         .file_name()
         .and_then(|n| n.to_str())
         .ok_or(LedgerlineError::from("Invalid or malicious backup filename"))?;
 
-    {
-        let mut store = token_store.tokens.lock().unwrap();
-        let key = format!("{}::{}", workspace_id, safe_filename);
-        if let Some(expected_token) = store.get(&key) {
-            if expected_token != &token {
-                return Err(LedgerlineError::from("Invalid confirmation token"));
-            }
-            store.remove(&key);
-        } else {
-            return Err(LedgerlineError::from("No restore request found for this backup"));
-        }
-    }
+    token_store.consume(&token, &crate::utils::token_store::ActionType::RestoreBackup { 
+        workspace_id: workspace_id.clone(), 
+        filename: safe_filename.to_string() 
+    }).map_err(LedgerlineError::from)?;
     
     let mgr = state.workspace_manager.lock().unwrap();
     
@@ -87,9 +73,18 @@ pub fn backup_restore_confirm(workspace_id: String, filename: String, token: Str
     }
 
     state.backup_manager.restore(&backup_path, &ws.db_path).map_err(LedgerlineError::from)?;
+    
+    // Invalidate migration cache so the restored (possibly older) DB schema is checked again
+    crate::db::connection::invalidate_migration_cache(&ws.id);
+
     log_info("Backup", &format!("Restore confirmed and executed for {}", filename));
     
     Ok(())
+}
+
+#[tauri::command]
+pub fn backup_restore_confirm(workspace_id: String, filename: String, token: String, state: State<'_, AppState>, token_store: State<'_, crate::utils::token_store::SecureTokenStore>) -> Result<(), LedgerlineError> {
+    core_backup_restore_confirm(workspace_id, filename, token, &*state, &*token_store)
 }
 
 #[cfg(test)]

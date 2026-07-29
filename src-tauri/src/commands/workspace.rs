@@ -37,14 +37,25 @@ pub fn workspace_switch(id: String, state: State<'_, AppState>) -> Result<Worksp
 }
 
 #[tauri::command]
-pub fn workspace_delete_request(id: String, state: State<'_, AppState>) -> Result<String, LedgerlineError> {
+pub fn workspace_delete_request(id: String, state: State<'_, AppState>, token_store: State<'_, crate::utils::token_store::SecureTokenStore>) -> Result<String, LedgerlineError> {
     log_info("Workspace", &format!("Delete request initiated for workspace {}", id));
+    
+    // Verify workspace exists
     let mgr = state.workspace_manager.lock().unwrap();
-    mgr.request_delete(&id).map_err(LedgerlineError::from)
+    let workspaces = mgr.list_workspaces().map_err(LedgerlineError::from)?;
+    if !workspaces.iter().any(|w| w.id == id) {
+        return Err(LedgerlineError::from(crate::workspace::manager::WorkspaceError::NotFound(id)));
+    }
+
+    let token = token_store.mint(crate::utils::token_store::ActionType::DeleteWorkspace { id });
+    Ok(token)
 }
 
 #[tauri::command]
-pub fn workspace_delete_confirm(token: String, state: State<'_, AppState>) -> Result<(), LedgerlineError> {
+pub fn workspace_delete_confirm(id: String, token: String, state: State<'_, AppState>, token_store: State<'_, crate::utils::token_store::SecureTokenStore>) -> Result<(), LedgerlineError> {
+    token_store.consume(&token, &crate::utils::token_store::ActionType::DeleteWorkspace { id: id.clone() })
+        .map_err(LedgerlineError::from)?;
+        
     let mgr = state.workspace_manager.lock().unwrap();
-    mgr.confirm_delete(&token).map_err(LedgerlineError::from)
+    mgr.delete_workspace(&id).map_err(LedgerlineError::from)
 }

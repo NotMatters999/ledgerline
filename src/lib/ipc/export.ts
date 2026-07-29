@@ -7,11 +7,11 @@ export interface CsvExportResult {
 }
 
 export async function exportCsv(workspaceId: string): Promise<CsvExportResult> {
-    return await invoke<CsvExportResult>('export_csv', { workspace_id: workspaceId });
+    return await invoke<CsvExportResult>('csv_export', { workspace_id: workspaceId });
 }
 
 export async function exportPdf(workspaceId: string): Promise<number[]> {
-    return await invoke<number[]>('export_pdf', { workspace_id: workspaceId });
+    return await invoke<number[]>('pdf_export', { workspace_id: workspaceId });
 }
 
 export function downloadBlob(content: string | Uint8Array | number[], filename: string, mimeType: string) {

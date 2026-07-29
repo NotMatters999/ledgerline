@@ -10,9 +10,9 @@ use commands::workspace::*;
 use commands::import::*;
 use commands::engines::{mrr_get, arr_get, retention_get, ltv_get, cac_get, payback_get, forecast_get, cohort_get};
 use commands::settings::{setting_set, setting_get, setting_get_f64, marketing_spend_add};
-use commands::export::{export_csv, export_pdf};
-use commands::backup::{backup_list, backup_create, backup_restore_request, backup_restore_confirm, BackupTokenStore};
-use commands::data::{mrr_log_list, mrr_log_count, mrr_log_add, mrr_log_delete};
+use commands::export::{csv_export, pdf_export};
+use commands::backup::{backup_list, backup_create, backup_restore_request, backup_restore_confirm};
+use commands::data::{mrr_log_list, mrr_log_count, mrr_log_add, mrr_log_delete_request, mrr_log_delete_confirm};
 use workspace::manager::WorkspaceManager;
 use workspace::backup::BackupManager;
 use utils::logger::Logger;
@@ -55,7 +55,7 @@ pub fn run() {
                 workspace_manager: std::sync::Mutex::new(workspace_manager),
                 backup_manager,
             });
-            app.manage(BackupTokenStore::new());
+            app.manage(utils::token_store::SecureTokenStore::new());
 
             utils::logger::log_info("System", &format!("Cold start time: {:?}", start_time.elapsed()));
             Ok(())
@@ -87,8 +87,8 @@ pub fn run() {
             setting_get,
             setting_get_f64,
             marketing_spend_add,
-            export_csv,
-            export_pdf,
+            csv_export,
+            pdf_export,
             backup_list,
             backup_create,
             backup_restore_request,
@@ -96,7 +96,8 @@ pub fn run() {
             mrr_log_list,
             mrr_log_count,
             mrr_log_add,
-            mrr_log_delete
+            mrr_log_delete_request,
+            mrr_log_delete_confirm
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -16,6 +16,7 @@ interface FinancialsState {
     payback: PaybackMovement[];
 
     fetchData: (workspaceId: string) => Promise<void>;
+    clear: () => void;
 }
 
 export const useFinancialsStore = create<FinancialsState>((set) => ({
@@ -54,5 +55,7 @@ export const useFinancialsStore = create<FinancialsState>((set) => ({
         } catch (error: any) {
             set({ error: error.toString(), isLoading: false });
         }
-    }
+    },
+
+    clear: () => set({ mrr: [], arr: [], retention: [], ltv: [], cac: [], payback: [], error: null, isLoading: false })
 }));

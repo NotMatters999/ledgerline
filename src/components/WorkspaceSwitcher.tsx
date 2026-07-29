@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useWorkspaceStore } from '../store/workspace';
+import { InlineConfirm } from './InlineConfirm';
 
 interface Props {
     /** Called after any switch/create/delete so App can refetch data */
@@ -187,24 +188,14 @@ export const WorkspaceSwitcher: React.FC<Props> = ({ onActiveIdChange }) => {
                                 </div>
                             ) : deletingId === ws.id ? (
                                 /* Delete confirmation */
-                                <div style={{
-                                    padding: '0.5rem', borderRadius: '0.5rem', marginBottom: '2px',
-                                    background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-                                }}>
-                                    <p style={{ fontSize: '0.75rem', color: 'var(--status-danger)', marginBottom: '0.4rem' }}>
-                                        Delete "{ws.name}"? This cannot be undone.
-                                    </p>
-                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                        <button onClick={() => handleDelete(ws.id)}
-                                            style={{ ...btnStyle('var(--status-danger)'), flex: 1 }}>
-                                            Delete
-                                        </button>
-                                        <button onClick={() => setDeletingId(null)}
-                                            style={{ ...btnStyle('rgba(255,255,255,0.1)', 'var(--text-muted)'), flex: 1 }}>
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </div>
+                                <InlineConfirm
+                                    variant="stacked"
+                                    message={`Delete "${ws.name}"? This cannot be undone.`}
+                                    confirmText="Delete"
+                                    cancelText="Cancel"
+                                    onConfirm={() => handleDelete(ws.id)}
+                                    onCancel={() => setDeletingId(null)}
+                                />
                             ) : (
                                 /* Normal workspace row */
                                 <div

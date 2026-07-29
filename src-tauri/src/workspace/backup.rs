@@ -89,6 +89,14 @@ impl BackupManager {
             // Delete anything beyond the 5th file
             for file_to_delete in files.iter().skip(5) {
                 let _ = fs::remove_file(file_to_delete);
+                
+                // Also clean up the sidecar .wal file if one exists
+                let mut wal_os = file_to_delete.as_os_str().to_os_string();
+                wal_os.push(".wal");
+                let wal = PathBuf::from(wal_os);
+                if wal.exists() {
+                    let _ = fs::remove_file(wal);
+                }
             }
         }
         
@@ -194,6 +202,50 @@ mod tests {
             PathBuf::from(s)
         }.exists());
 
+        let _ = fs::remove_dir_all(&dir);
+    }
+    
+    #[test]
+    fn test_backup_retention_removes_wal_sidecars() {
+        let dir = get_test_dir();
+        fs::create_dir_all(&dir).unwrap();
+        let manager = BackupManager::new(&dir);
+        let ws_id = "test_retention";
+        let backups_dir = dir.join("backups").join(ws_id);
+        fs::create_dir_all(&backups_dir).unwrap();
+        
+        // Create 6 dummy backups and 6 dummy WALs (limit is 5)
+        for i in 0..6 {
+            let bak = backups_dir.join(format!("backup_{}.duckdb.bak", i));
+            let mut wal_os = bak.as_os_str().to_os_string();
+            wal_os.push(".wal");
+            let wal = PathBuf::from(wal_os);
+            
+            fs::write(&bak, "dummy").unwrap();
+            fs::write(&wal, "dummy wal").unwrap();
+            
+            // Artificial delay to ensure distinct modified timestamps
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        
+        // Use an empty dummy db to trigger a new backup, forcing retention sweep
+        let dummy_db = dir.join("dummy.duckdb");
+        fs::write(&dummy_db, "new").unwrap();
+        manager.backup(&dummy_db, ws_id).unwrap();
+        
+        // Should only be 5 backups + their 5 WALs left (10 files total). 
+        // The oldest backup_0 AND its WAL should be gone.
+        let entries: Vec<_> = fs::read_dir(&backups_dir).unwrap().map(|e| e.unwrap().path()).collect();
+        assert_eq!(entries.len(), 10, "Should only retain 5 backups and 5 wals");
+        
+        let oldest_bak = backups_dir.join("backup_0.duckdb.bak");
+        let mut oldest_wal_os = oldest_bak.as_os_str().to_os_string();
+        oldest_wal_os.push(".wal");
+        let oldest_wal = PathBuf::from(oldest_wal_os);
+        
+        assert!(!oldest_bak.exists(), "Oldest backup should be deleted");
+        assert!(!oldest_wal.exists(), "Oldest WAL sidecar should be deleted");
+        
         let _ = fs::remove_dir_all(&dir);
     }
 }

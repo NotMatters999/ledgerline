@@ -4,6 +4,8 @@ import {
     switchWorkspace, requestDeleteWorkspace, confirmDeleteWorkspace,
     Workspace,
 } from '../lib/ipc/workspace';
+import { useFinancialsStore } from './financials';
+import { useCohortStore } from './cohort';
 
 interface WorkspaceState {
     workspaces: Workspace[];
@@ -58,13 +60,18 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
     remove: async (id: string) => {
         const token = await requestDeleteWorkspace(id);
-        await confirmDeleteWorkspace(token);
+        await confirmDeleteWorkspace(id, token);
         const state = get();
         const remaining = state.workspaces.filter(w => w.id !== id);
         let newActiveId = state.activeId;
         if (state.activeId === id) {
             newActiveId = remaining.length > 0 ? remaining[0].id : '';
-            await switchWorkspace(newActiveId);
+            if (newActiveId) {
+                await switchWorkspace(newActiveId);
+            } else {
+                useFinancialsStore.getState().clear();
+                useCohortStore.getState().clear();
+            }
         }
         set({ workspaces: remaining, activeId: newActiveId });
     },

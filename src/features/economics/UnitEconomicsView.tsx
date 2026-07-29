@@ -23,7 +23,7 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
             fetchData(activeWorkspaceId);
             
             getSettingF64(activeWorkspaceId, 'gross_margin')
-                .then(val => setGrossMarginInput((val * 100).toString()))
+                .then(val => setGrossMarginInput((Math.round(val * 10000) / 100).toString()))
                 .catch(() => setGrossMarginInput('100'));
         }
     }, [activeWorkspaceId, fetchData]);
@@ -43,7 +43,7 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
             if (isNaN(percentage) || percentage < 0 || percentage > 100) {
                 throw new Error("Gross margin must be between 0 and 100");
             }
-            const decimal = percentage / 100;
+            const decimal = Math.round(percentage * 100) / 10000;
             await setSetting(activeWorkspaceId, 'gross_margin', decimal.toString());
             await fetchData(activeWorkspaceId);
         } catch (err: any) {
