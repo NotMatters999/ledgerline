@@ -12,7 +12,7 @@ pub fn file_hash(path: &Path) -> Result<String, std::io::Error> {
 
 fn update_prefixed(hasher: &mut Sha256, val: &str) {
     let bytes = val.as_bytes();
-    hasher.update(&(bytes.len() as u64).to_be_bytes());
+    hasher.update((bytes.len() as u64).to_be_bytes());
     hasher.update(bytes);
 }
 

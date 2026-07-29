@@ -35,7 +35,7 @@ pub fn detect_columns(headers: &[String]) -> MappedColumns {
     };
 
     for (i, header) in headers.iter().enumerate() {
-        let clean = header.trim().to_lowercase().replace(' ', "_").replace('-', "_");
+        let clean = header.trim().to_lowercase().replace([' ', '-'], "_");
         
         if mapped.customer_id_idx.is_none() && customer_aliases.contains(&clean.as_str()) {
             mapped.customer_id_idx = Some(i);

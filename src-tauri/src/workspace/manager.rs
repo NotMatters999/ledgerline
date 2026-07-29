@@ -154,14 +154,14 @@ impl WorkspaceManager {
         let ws = &workspaces[pos];
         
         if ws.db_path.exists() {
-            fs::remove_file(&ws.db_path).map_err(|e| WorkspaceError::Io(e))?;
+            fs::remove_file(&ws.db_path).map_err(WorkspaceError::Io)?;
         }
         
         let mut wal_os = ws.db_path.as_os_str().to_os_string();
         wal_os.push(".wal");
         let wal = PathBuf::from(wal_os);
         if wal.exists() {
-            fs::remove_file(wal).map_err(|e| WorkspaceError::Io(e))?;
+            fs::remove_file(wal).map_err(WorkspaceError::Io)?;
         }
         
         workspaces.remove(pos);

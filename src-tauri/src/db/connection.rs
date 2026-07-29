@@ -65,7 +65,7 @@ mod tests {
             let map = MIGRATED_WORKSPACES.get().unwrap().lock().unwrap();
             let arc = map.get(ws_id).unwrap();
             let is_migrated = arc.lock().unwrap();
-            assert_eq!(*is_migrated, false, "Should not be marked as migrated");
+            assert!(!*is_migrated, "Should not be marked as migrated");
         }
         
         // 4. Fix the sabotage
@@ -83,7 +83,7 @@ mod tests {
             let map = MIGRATED_WORKSPACES.get().unwrap().lock().unwrap();
             let arc = map.get(ws_id).unwrap();
             let is_migrated = arc.lock().unwrap();
-            assert_eq!(*is_migrated, true, "Should now be marked as migrated");
+            assert!(*is_migrated, "Should now be marked as migrated");
         }
     }
     

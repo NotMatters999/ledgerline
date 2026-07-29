@@ -44,7 +44,7 @@ pub fn core_backup_restore_request(workspace_id: String, filename: String, token
 
 #[tauri::command]
 pub fn backup_restore_request(workspace_id: String, filename: String, token_store: State<'_, crate::utils::token_store::SecureTokenStore>) -> Result<String, LedgerlineError> {
-    core_backup_restore_request(workspace_id, filename, &*token_store)
+    core_backup_restore_request(workspace_id, filename, &token_store)
 }
 
 pub fn core_backup_restore_confirm(workspace_id: String, filename: String, token: String, state: &AppState, token_store: &crate::utils::token_store::SecureTokenStore) -> Result<(), LedgerlineError> {
@@ -81,7 +81,7 @@ pub fn core_backup_restore_confirm(workspace_id: String, filename: String, token
 
 #[tauri::command]
 pub fn backup_restore_confirm(workspace_id: String, filename: String, token: String, state: State<'_, AppState>, token_store: State<'_, crate::utils::token_store::SecureTokenStore>) -> Result<(), LedgerlineError> {
-    core_backup_restore_confirm(workspace_id, filename, token, &*state, &*token_store)
+    core_backup_restore_confirm(workspace_id, filename, token, &state, &token_store)
 }
 
 #[cfg(test)]
