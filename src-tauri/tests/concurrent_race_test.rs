@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::thread;
 use duckdb::Connection;
-use ledgerline::db::migrations::run_migrations;
+use ledgerline_lib::db::migrations::run_migrations;
 
 #[test]
 fn test_concurrent_initialization_race() {
