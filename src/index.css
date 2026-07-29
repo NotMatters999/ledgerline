@@ -386,8 +386,6 @@ body {
   animation: spin 1s linear infinite;
 }
 
-/* ─── Text accent ─────────────────────────────────────────────────────────── */
-.text-accent { color: var(--accent-primary); }
 
 /* ─── Tooltip ─────────────────────────────────────────────────────────────── */
 .tooltip-wrapper {

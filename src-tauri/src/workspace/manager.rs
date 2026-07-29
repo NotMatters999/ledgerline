@@ -10,6 +10,7 @@ pub struct Workspace {
     pub name: String,
     pub created_at: DateTime<Utc>,
     pub last_accessed: DateTime<Utc>,
+    #[serde(skip)]
     pub db_path: PathBuf,
 }
 
@@ -82,7 +83,10 @@ impl WorkspaceManager {
 
     pub fn list_workspaces(&self) -> Result<Vec<Workspace>, WorkspaceError> {
         let data = fs::read_to_string(&self.workspaces_json_path)?;
-        let workspaces: Vec<Workspace> = serde_json::from_str(&data)?;
+        let mut workspaces: Vec<Workspace> = serde_json::from_str(&data)?;
+        for ws in &mut workspaces {
+            ws.db_path = self.workspaces_dir.join(format!("{}.duckdb", ws.id));
+        }
         Ok(workspaces)
     }
 

@@ -92,7 +92,7 @@ pub fn preview(path: &Path) -> Result<PreviewResult, ImportError> {
     })
 }
 
-pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
+pub fn commit(conn: &mut Connection, path: &Path) -> Result<usize, ImportError> {
     let parsed = parse_file(path)?;
     let mapped = detect_columns(&parsed.headers);
 
@@ -194,12 +194,12 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<(), ImportError> {
     }
 
     {
-        let mut insert_stmt = tx.prepare("INSERT INTO mrr_log (customer_id, period, mrr_amount, currency, category) VALUES (?, ?, ?, ?, ?)")?;
+        let mut insert_stmt = tx.prepare("INSERT INTO mrr_log (customer_id, period, mrr_amount, currency, category) VALUES (?, ?, ?, ?, ?) ON CONFLICT (customer_id, period) DO UPDATE SET mrr_amount = excluded.mrr_amount, currency = excluded.currency, category = excluded.category")?;
         for row in &final_rows {
             insert_stmt.execute(duckdb::params![row.0, row.1, row.2, row.3, row.4])?;
         }
     }
 
     tx.commit()?;
-    Ok(())
+    Ok(final_rows.len())
 }

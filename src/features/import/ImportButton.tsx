@@ -54,8 +54,7 @@ export const ImportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
         const { filePath, result } = phase;
         setPhase({ tag: 'committing' });
         try {
-            await importCommit(activeWorkspaceId, filePath);
-            const rowCount = result.sample_normalized.length;
+            const rowCount = await importCommit(activeWorkspaceId, filePath);
             setPhase({ tag: 'success', rowCount });
             // Refresh all data stores
             await Promise.all([

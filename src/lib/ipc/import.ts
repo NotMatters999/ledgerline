@@ -25,6 +25,6 @@ export async function importPreview(workspaceId: string, filePath: string): Prom
     return await invoke<PreviewResult>('import_preview', { workspace_id: workspaceId, file_path: filePath });
 }
 
-export async function importCommit(workspaceId: string, filePath: string): Promise<void> {
-    return await invoke<void>('import_commit', { workspace_id: workspaceId, file_path: filePath });
+export async function importCommit(workspaceId: string, filePath: string): Promise<number> {
+    return await invoke<number>('import_commit', { workspace_id: workspaceId, file_path: filePath });
 }

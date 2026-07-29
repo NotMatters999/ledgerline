@@ -14,7 +14,7 @@ pub fn import_preview(workspace_id: String, file_path: String, _state: State<'_,
 }
 
 #[tauri::command]
-pub fn import_commit(workspace_id: String, file_path: String, state: State<'_, AppState>) -> Result<(), LedgerlineError> {
+pub fn import_commit(workspace_id: String, file_path: String, state: State<'_, AppState>) -> Result<usize, LedgerlineError> {
     log_info("Import", &format!("Starting import commit for file: {}", file_path));
     let (ws_id, db_path) = {
         let mgr = state.workspace_manager.lock().unwrap();
@@ -31,11 +31,11 @@ pub fn import_commit(workspace_id: String, file_path: String, state: State<'_, A
     }
 
     let mut conn = open_connection(&db_path, Some(&ws_id)).map_err(LedgerlineError::from)?;
-    commit(&mut conn, PathBuf::from(file_path).as_path()).map_err(LedgerlineError::from)?;
+    let count = commit(&mut conn, PathBuf::from(file_path).as_path()).map_err(LedgerlineError::from)?;
     
-    log_info("Import", "Import commit completed successfully");
+    log_info("Import", &format!("Import commit completed successfully, {} rows", count));
     
-    Ok(())
+    Ok(count)
 }
 
 #[cfg(test)]

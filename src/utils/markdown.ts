@@ -18,26 +18,26 @@ export function parseMarkdown(text: string): string {
     html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
     // 3. Inline code (e.g., `text`)
-    html = html.replace(/`(.*?)`/g, '<code class="bg-gray-800 text-emerald-400 px-1 py-0.5 rounded text-sm font-mono">$1</code>');
+    html = html.replace(/`(.*?)`/g, '<code style="background: rgba(255,255,255,0.1); color: var(--accent-primary); padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-size: 0.875rem; font-family: monospace;">$1</code>');
 
     // 4. Links (e.g., [text](url))
-    html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>');
+    html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" style="color: var(--accent-secondary); text-decoration: underline;" target="_blank" rel="noopener noreferrer">$1</a>');
 
     // 5. Headings
-    html = html.replace(/^### (.*$)/gim, '<h3 class="text-xl font-bold text-white mt-6 mb-3">$1</h3>');
-    html = html.replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold text-white mt-8 mb-4 border-b border-white/10 pb-2">$1</h2>');
-    html = html.replace(/^# (.*$)/gim, '<h1 class="text-3xl font-extrabold text-white mt-4 mb-6">$1</h1>');
+    html = html.replace(/^### (.*$)/gim, '<h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-top: 1.5rem; margin-bottom: 0.75rem;">$1</h3>');
+    html = html.replace(/^## (.*$)/gim, '<h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-top: 2rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">$1</h2>');
+    html = html.replace(/^# (.*$)/gim, '<h1 class="page-title" style="margin-top: 1rem; margin-bottom: 1.5rem;">$1</h1>');
 
     // 6. Blockquotes
-    html = html.replace(/^> (.*$)/gim, '<blockquote class="border-l-4 border-emerald-500 pl-4 py-1 my-4 text-gray-400 italic bg-white/5 rounded-r">$1</blockquote>');
+    html = html.replace(/^> (.*$)/gim, '<blockquote style="border-left: 4px solid var(--accent-primary); padding-left: 1rem; padding-top: 0.25rem; padding-bottom: 0.25rem; margin-top: 1rem; margin-bottom: 1rem; color: var(--text-muted); font-style: italic; background: rgba(255,255,255,0.05); border-radius: 0 0.25rem 0.25rem 0;">$1</blockquote>');
 
     // 7. Unordered Lists (simple bullet detection)
     // Note: this handles flat lists. For nested lists, a more complex AST is needed, 
     // but for simple docs this suffices.
-    html = html.replace(/^\s*-\s+(.*$)/gim, '<li class="ml-6 list-disc text-gray-300 my-1">$1</li>');
+    html = html.replace(/^\s*-\s+(.*$)/gim, '<li style="margin-left: 1.5rem; list-style-type: disc; color: var(--text-secondary); margin-top: 0.25rem; margin-bottom: 0.25rem;">$1</li>');
     
     // Wrap consecutive <li> elements in <ul> (crude but effective for static docs)
-    html = html.replace(/(<li.*?>.*?<\/li>\n?)+/g, '<ul class="my-4">$&</ul>');
+    html = html.replace(/(<li.*?>.*?<\/li>\n?)+/g, '<ul style="margin-top: 1rem; margin-bottom: 1rem;">$&</ul>');
 
     // 8. Paragraphs (lines that don't start with a tag)
     // First, split by double newline to identify blocks
@@ -48,7 +48,7 @@ export function parseMarkdown(text: string): string {
             return block;
         }
         // Otherwise, wrap in a paragraph
-        return `<p class="text-gray-300 leading-relaxed mb-4">${block.trim().replace(/\n/g, '<br/>')}</p>`;
+        return `<p style="color: var(--text-secondary); line-height: 1.625; margin-bottom: 1rem;">${block.trim().replace(/\n/g, '<br/>')}</p>`;
     }).join('\n');
 
     return html;

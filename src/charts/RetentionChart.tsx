@@ -77,9 +77,9 @@ export const RetentionChart: React.FC<RetentionChartProps> = ({ data }) => {
     }, [data]);
 
     return (
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl w-full h-[400px]">
-            <h3 className="text-gray-300 font-medium mb-4">Retention (NRR & GRR)</h3>
-            <div className="w-full h-[320px]">
+        <div className="glass-panel p-6" style={{ width: '100%', height: '400px' }}>
+            <h3 className="card-title" style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>Retention (NRR & GRR)</h3>
+            <div style={{ width: '100%', height: '320px' }}>
                 <CoreChart option={option} />
             </div>
         </div>
