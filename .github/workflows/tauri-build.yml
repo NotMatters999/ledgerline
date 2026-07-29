@@ -8,8 +8,55 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ── Windows ──────────────────────────────────────────────────────────────────
+  # ── Fast Syntax & Type Check ────────────────────────────────────────────────
+  check:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: 'src-tauri -> target'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck Frontend
+        run: pnpm exec tsc --noEmit
+
+      - name: Check Rust (all targets)
+        run: cargo check --all-targets --manifest-path src-tauri/Cargo.toml
+
+      - name: Run Backend Tests
+        run: cargo test --test verification_test -- --nocapture
+        working-directory: src-tauri
+
+      - name: Clippy (deny warnings)
+        run: cargo clippy --all-targets --all-features -- -D warnings
+        working-directory: src-tauri
+
+  # ── Windows Full Build ──────────────────────────────────────────────────────
   build-windows:
+    needs: check
     runs-on: windows-latest
     permissions:
       contents: write   # required for softprops/action-gh-release to create releases
@@ -42,14 +89,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Run Backend Tests
-        run: cargo test --test verification_test -- --nocapture
-        working-directory: src-tauri
-
-      - name: Clippy (deny warnings)
-        run: cargo clippy --all-targets --all-features -- -D warnings
-        working-directory: src-tauri
 
       - name: Build Tauri App
         run: pnpm run tauri build

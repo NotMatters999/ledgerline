@@ -34,40 +34,7 @@ fn test_fix2_financial_engines_and_reactivation() {
     // run_migrations creates mrr_log, monthly_assumptions, settings, etc.
     run_migrations(&mut conn).unwrap();
 
-    conn.execute_batch("
-        -- Jan: A($100), B($100) → New:200, Ending:200
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('A', '2024-01-01', 100.0, 'USD');
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('B', '2024-01-01', 100.0, 'USD');
-
-        -- Feb: A churns. B expands($150). C is new($50).
-        -- Beginning:200, Churn:100, Expansion:50, New:50, Ending:200
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('B', '2024-02-01', 150.0, 'USD');
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('C', '2024-02-01', 50.0, 'USD');
-
-        -- Mar: A returns exactly 1 month later (gap=2 months from Jan to Mar, diff_months<=2) → Expansion
-        --      B stays($150). C churns.
-        -- Beginning:200, Expansion:100 (A), Churn:50 (C), Ending:250
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('A', '2024-03-01', 100.0, 'USD');
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('B', '2024-03-01', 150.0, 'USD');
-
-        -- Apr: C returns after 2 months gap (Feb→Apr: diff_months=2, which is <=2 in code)
-        --      B contracts($100). A stays($100).
-        -- Wait: in mrr.rs: diff_months <= 2 is Expansion, > 2 is Reactivation
-        -- C last active was Feb. Apr - Feb = 2 months. That means diff_months=2 → Expansion (<=2).
-        -- So for actual Reactivation, we need diff_months > 2 i.e. a customer absent for 3+ months.
-        -- Let's add E that was in Jan, absent Feb+Mar, returns in Apr → diff=3 → Reactivation.
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('A', '2024-04-01', 100.0, 'USD');
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('B', '2024-04-01', 100.0, 'USD');
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('C', '2024-04-01', 50.0, 'USD');
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('E', '2024-01-01', 80.0, 'USD');
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('E', '2024-04-01', 80.0, 'USD');
-
-        -- monthly_assumptions for CAC/LTV assertions
-        INSERT INTO monthly_assumptions (month, marketing_spend, gross_margin) VALUES ('2024-01', 1000.0, 0.8);
-        INSERT INTO monthly_assumptions (month, marketing_spend, gross_margin) VALUES ('2024-02', 500.0, 0.85);
-        INSERT INTO monthly_assumptions (month, marketing_spend, gross_margin) VALUES ('2024-03', 1500.0, 0.9);
-        INSERT INTO monthly_assumptions (month, marketing_spend, gross_margin) VALUES ('2024-04', 2000.0, 0.9);
-    ").unwrap();
+    conn.execute_batch(include_str!("fixtures/mrr_reactivation_setup.sql")).unwrap();
 
     let mrr = calculate_mrr(&conn).unwrap();
 
@@ -122,7 +89,7 @@ fn test_fix2_financial_engines_and_reactivation() {
 fn test_fix2_forecast_speed() {
     let mut conn = Connection::open_in_memory().unwrap();
     run_migrations(&mut conn).unwrap();
-    conn.execute_batch("INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('A', '2024-01-01', 100.0, 'USD')").unwrap();
+    conn.execute_batch(include_str!("fixtures/forecast_speed_setup.sql")).unwrap();
 
     let params = ForecastParams {
         monthly_churn_rate: 0.05,
@@ -160,9 +127,7 @@ fn test_fix1_backup_system_roundtrip() {
     // 2. Seed real data — MUST run migrations first so mrr_log exists
     {
         let conn = ledgerline_lib::db::connection::open_connection(&ws.db_path, Some(&ws.id)).unwrap();
-        conn.execute_batch("
-            INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('Z', '2024-01-01', 999.0, 'USD');
-        ").unwrap();
+        conn.execute_batch(include_str!("fixtures/backup_roundtrip_setup.sql")).unwrap();
     }
 
     // 3. Create backup via backend command
@@ -201,9 +166,7 @@ fn test_fix1_backup_system_roundtrip() {
 fn test_fix3_export_system_validity() {
     let mut conn = Connection::open_in_memory().unwrap();
     run_migrations(&mut conn).unwrap();
-    conn.execute_batch("
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('A', '2024-01-01', 100.0, 'USD');
-    ").unwrap();
+    conn.execute_batch(include_str!("fixtures/export_validity_setup.sql")).unwrap();
 
     // CSV: call generate_csv (pure logic, no Tauri State)
     let csv_result = generate_csv(&conn).unwrap();
@@ -291,7 +254,7 @@ fn test_migration_cache_and_restore_interaction() {
         // open_connection will run migrations and cache it
         let conn = ledgerline_lib::db::connection::open_connection(&ws.db_path, Some(&ws.id)).unwrap();
         // Insert a row to prove schema exists
-        conn.execute_batch("INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('MIG1', '2024-01-01', 100.0, 'USD')").unwrap();
+        conn.execute_batch(include_str!("fixtures/migration_cache_insert.sql")).unwrap();
     }
     
     // 2. Second connection: Migrations MUST NOT run (cached)
@@ -307,7 +270,7 @@ fn test_migration_cache_and_restore_interaction() {
     // 4. Mutate database (e.g. drop table) to simulate a stale/different schema
     {
         let conn = ledgerline_lib::db::connection::open_connection(&ws.db_path, Some(&ws.id)).unwrap();
-        conn.execute_batch("DROP TABLE mrr_log;").unwrap();
+        conn.execute_batch(include_str!("fixtures/migration_cache_drop.sql")).unwrap();
     }
     
     // 5. Restore using the full token round trip (core functions instead of raw Tauri wrappers)

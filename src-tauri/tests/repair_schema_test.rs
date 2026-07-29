@@ -6,12 +6,7 @@ fn test_repair_schema_runs_on_broken_workspace() {
     let mut conn = Connection::open_in_memory().unwrap();
     
     // Simulate a broken workspace that ran the original 0001 schema (which missed mrr_log)
-    conn.execute_batch("
-        CREATE TABLE schema_version (version INTEGER PRIMARY KEY);
-        INSERT INTO schema_version (version) VALUES (1);
-        CREATE TABLE customers (customer_id VARCHAR PRIMARY KEY, first_seen DATE NOT NULL, status VARCHAR NOT NULL, metadata VARCHAR);
-        -- mrr_log is MISSING here!
-    ").unwrap();
+    conn.execute_batch(include_str!("fixtures/broken_schema_setup.sql")).unwrap();
 
     // Verify mrr_log does NOT exist
     let has_mrr_log: i64 = conn.query_row(
