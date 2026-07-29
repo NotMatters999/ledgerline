@@ -1,20 +1,8 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
-
-fn remove_duckdb_wal(path: &Path) {
-    let mut wal_os = path.as_os_str().to_os_string();
-    wal_os.push(".wal");
-    let wal = PathBuf::from(wal_os);
-    
-    if wal.exists() {
-        let _ = fs::remove_file(wal);
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Workspace {

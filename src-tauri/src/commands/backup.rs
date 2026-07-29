@@ -1,7 +1,4 @@
 use tauri::State;
-use std::collections::HashMap;
-use std::sync::Mutex;
-use uuid::Uuid;
 use crate::commands::workspace::AppState;
 use crate::utils::error::LedgerlineError;
 use crate::utils::logger::log_info;
