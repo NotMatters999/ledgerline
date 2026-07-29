@@ -272,11 +272,11 @@ fn test_migration_cache_and_restore_interaction() {
     let temp_dir = std::env::temp_dir().join(format!("ledgerline_migration_test_{}", uuid_simple()));
     std::fs::create_dir_all(&temp_dir).unwrap();
 
-    let ws_manager = std::sync::Arc::new(std::sync::Mutex::new(ledgerline_lib::workspace::manager::WorkspaceManager::new(&temp_dir).unwrap()));
+    let ws_manager = std::sync::Mutex::new(ledgerline_lib::workspace::manager::WorkspaceManager::new(&temp_dir).unwrap());
     let bk_manager = ledgerline_lib::workspace::backup::BackupManager::new(&temp_dir);
     
     let app_state = AppState {
-        workspace_manager: ws_manager.clone(),
+        workspace_manager: ws_manager,
         backup_manager: bk_manager,
     };
     let token_store = SecureTokenStore::new();
