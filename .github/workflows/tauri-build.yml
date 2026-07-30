@@ -38,7 +38,7 @@ jobs:
           workspaces: 'src-tauri -> target'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Typecheck Frontend
         run: pnpm exec tsc --noEmit
@@ -88,7 +88,7 @@ jobs:
           workspaces: 'src-tauri -> target'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build Tauri App
         run: pnpm run tauri build
