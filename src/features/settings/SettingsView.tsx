@@ -2,10 +2,14 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { listBackups, createBackup, requestRestore, confirmRestore } from '../../lib/ipc/backup';
 import { getSetting, setSetting } from '../../lib/ipc/settings';
 import { percentToDecimal, decimalToPercent } from '../../utils/math';
+import { ErrorBanner } from '../../components/ErrorBanner';
+import { mapBackendError } from '../../utils/errors';
+
+import { useWorkspaceStore } from '../../store/workspace';
 
 type ActiveTab = 'backups' | 'preferences';
 
-export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
+export const SettingsView: React.FC = () => {
     const [activeTab, setActiveTab] = useState<ActiveTab>('backups');
 
     // ── Backup state ───────────────────────────────────────────────────────────
@@ -23,6 +27,8 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
     const [prefError, setPrefError] = useState<string | null>(null);
     const prefSaveTimer = useRef<number | null>(null);
 
+    const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
+
     const fetchBackups = useCallback(async () => {
         if (!activeWorkspaceId) {
             setBackups([]);
@@ -32,7 +38,7 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
 
         try {
             setLoading(true);
-            setBackups(await listBackups(activeWorkspaceId));
+            setBackups(await listBackups());
         } catch (err: unknown) {
             setActionError(String(err));
         } finally {
@@ -42,9 +48,9 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
 
     const loadPreferences = useCallback(async () => {
         const [gm, fx, df] = await Promise.allSettled([
-            getSetting(activeWorkspaceId, 'gross_margin'),
-            getSetting(activeWorkspaceId, 'fx_rate'),
-            getSetting(activeWorkspaceId, 'date_format'),
+            getSetting('gross_margin'),
+            getSetting('fx_rate'),
+            getSetting('date_format'),
         ]);
 
         if (gm.status === 'fulfilled') {
@@ -70,7 +76,7 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
         try {
             setActionError(null);
             setActionSuccess(null);
-            const filename = await createBackup(activeWorkspaceId);
+            const filename = await createBackup();
             setActionSuccess(`Backup created: ${filename}`);
             fetchBackups();
         } catch (err: any) {
@@ -83,7 +89,7 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
         try {
             setActionError(null);
             setActionSuccess(null);
-            const token = await requestRestore(activeWorkspaceId, filename);
+            const token = await requestRestore(filename);
             setPendingRestore({ filename, token });
         } catch (err: any) {
             setActionError(err.toString());
@@ -94,7 +100,7 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
         if (!pendingRestore) return;
         try {
             setActionError(null);
-            await confirmRestore(activeWorkspaceId, pendingRestore.filename, pendingRestore.token);
+            await confirmRestore(pendingRestore.filename, pendingRestore.token);
             setActionSuccess(`Restored from ${pendingRestore.filename}. Reload the app to see changes.`);
             setPendingRestore(null);
         } catch (err: any) {
@@ -114,9 +120,9 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
             if (!dateFormat.trim()) throw new Error('Date format cannot be empty');
 
             await Promise.all([
-                setSetting(activeWorkspaceId, 'gross_margin', percentToDecimal(gm).toString()),
-                setSetting(activeWorkspaceId, 'fx_rate', fx.toString()),
-                setSetting(activeWorkspaceId, 'date_format', dateFormat.trim()),
+                setSetting('gross_margin', percentToDecimal(gm).toString()),
+                setSetting('fx_rate', fx.toString()),
+                setSetting('date_format', dateFormat.trim()),
             ]);
             setPrefSaved(true);
             if (prefSaveTimer.current) window.clearTimeout(prefSaveTimer.current);
@@ -146,10 +152,8 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
             {/* ── Backups Tab ──────────────────────────────────────────────────── */}
             {activeTab === 'backups' && (
                 <>
-                    {actionError && (
-                        <div style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--status-danger)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(239,68,68,0.2)' }}>
-                            {actionError}
-                        </div>
+                    {actionError && mapBackendError(actionError) && (
+                        <ErrorBanner error={mapBackendError(actionError)} onClear={() => setActionError(null)} />
                     )}
                     {actionSuccess && (
                         <div style={{ background: 'rgba(16,185,129,0.1)', color: 'var(--status-success)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(16,185,129,0.2)' }}>
@@ -240,7 +244,9 @@ export const SettingsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWo
                         </div>
                     ))}
 
-                    {prefError && <p style={{ color: 'var(--status-danger)', fontSize: '0.875rem' }}>{prefError}</p>}
+                    {prefError && mapBackendError(prefError) && (
+                        <ErrorBanner error={mapBackendError(prefError)} onClear={() => setPrefError(null)} />
+                    )}
                     {prefSaved && <p style={{ color: 'var(--status-success)', fontSize: '0.875rem' }}>✓ Preferences saved</p>}
 
                     <button onClick={handleSavePreferences} className="btn-primary" style={{ alignSelf: 'flex-start' }}>

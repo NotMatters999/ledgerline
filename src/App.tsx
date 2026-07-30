@@ -88,17 +88,17 @@ function App() {
 
       {/* Main Content Area */}
       <div className="content-wrapper">
-        {activeTab === 'dashboard'   && <Dashboard activeWorkspaceId={activeId} />}
-        {activeTab === 'cohorts'     && <CohortView activeWorkspaceId={activeId} />}
-        {activeTab === 'retention'   && <RetentionView activeWorkspaceId={activeId} />}
-        {activeTab === 'waterfall'   && <WaterfallView activeWorkspaceId={activeId} />}
-        {activeTab === 'economics'   && <UnitEconomicsView activeWorkspaceId={activeId} />}
-        {activeTab === 'customers'   && <CustomerEconomicsView activeWorkspaceId={activeId} />}
-        {activeTab === 'churn'       && <ChurnAnalyticsView activeWorkspaceId={activeId} />}
-        {activeTab === 'forecasting' && <ForecastingView activeWorkspaceId={activeId} />}
-        {activeTab === 'data'        && <DataManagementView activeWorkspaceId={activeId} />}
+        {activeTab === 'dashboard'   && <Dashboard />}
+        {activeTab === 'cohorts'     && <CohortView />}
+        {activeTab === 'retention'   && <RetentionView />}
+        {activeTab === 'waterfall'   && <WaterfallView />}
+        {activeTab === 'economics'   && <UnitEconomicsView />}
+        {activeTab === 'customers'   && <CustomerEconomicsView />}
+        {activeTab === 'churn'       && <ChurnAnalyticsView />}
+        {activeTab === 'forecasting' && <ForecastingView />}
+        {activeTab === 'data'        && <DataManagementView />}
         {activeTab === 'docs'        && <DocumentationView />}
-        {activeTab === 'settings'    && <SettingsView activeWorkspaceId={activeId} />}
+        {activeTab === 'settings'    && <SettingsView />}
       </div>
     </div>
   );

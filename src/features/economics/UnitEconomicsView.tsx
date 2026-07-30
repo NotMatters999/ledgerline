@@ -5,10 +5,15 @@ import { LtvCacChart } from '../../charts/LtvCacChart';
 import { setSetting, getSettingF64, addMarketingSpend } from '../../lib/ipc/settings';
 import { percentToDecimal, decimalToPercent } from '../../utils/math';
 import { Tooltip } from '../../components/Tooltip';
+import { ErrorBanner } from '../../components/ErrorBanner';
+import { mapBackendError } from '../../utils/errors';
 
 
-export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
+import { useWorkspaceStore } from '../../store/workspace';
+
+export const UnitEconomicsView: React.FC = () => {
     const { ltv, cac, payback, mrr, isLoading, error, fetchData } = useFinancialsStore();
+    const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
 
     const [grossMarginInput, setGrossMarginInput] = useState<string>('');
     const [spendPeriodInput, setSpendPeriodInput] = useState<string>('');
@@ -21,9 +26,9 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
     // Initialize inputs
     useEffect(() => {
         if (activeWorkspaceId) {
-            fetchData(activeWorkspaceId);
+            fetchData();
             
-            getSettingF64(activeWorkspaceId, 'gross_margin')
+            getSettingF64('gross_margin')
                 .then(val => setGrossMarginInput(decimalToPercent(val)))
                 .catch(() => setGrossMarginInput('100'));
         }
@@ -45,8 +50,8 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
                 throw new Error("Gross margin must be between 0 and 100");
             }
             const decimal = percentToDecimal(percentage);
-            await setSetting(activeWorkspaceId, 'gross_margin', decimal.toString());
-            await fetchData(activeWorkspaceId);
+            await setSetting('gross_margin', decimal.toString());
+            await fetchData();
         } catch (err: any) {
             setActionError(err.toString());
         } finally {
@@ -67,9 +72,9 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
                 throw new Error("Please select a month");
             }
             
-            await addMarketingSpend(activeWorkspaceId, spendPeriodInput, amount);
+            await addMarketingSpend(spendPeriodInput, amount);
             setSpendAmountInput('');
-            await fetchData(activeWorkspaceId);
+            await fetchData();
         } catch (err: any) {
             setActionError(err.toString());
         } finally {
@@ -86,14 +91,16 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
     }
 
     if (error) {
-        return (
-            <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
-                <div className="glass-panel p-6" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
-                    <h2 className="page-title" style={{ fontSize: '1.25rem', color: 'var(--status-danger)' }}>Error Loading Unit Economics</h2>
-                    <p className="text-muted" style={{ marginTop: '0.5rem' }}>{error}</p>
+        const mappedError = mapBackendError(error);
+        if (mappedError) {
+            return (
+                <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
+                    <div style={{ width: '100%', maxWidth: '600px' }}>
+                        <ErrorBanner error={mappedError} onClear={() => useFinancialsStore.setState({ error: null })} />
+                    </div>
                 </div>
-            </div>
-        );
+            );
+        }
     }
 
     const currentLtv = ltv.length > 0 ? ltv[ltv.length - 1].ltv : null;

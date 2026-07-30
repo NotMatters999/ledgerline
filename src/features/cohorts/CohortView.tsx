@@ -2,17 +2,23 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useCohortStore } from '../../store/cohort';
 import { CoreChart } from '../../charts/CoreChart';
 import { CohortRow, CohortCell } from '../../lib/ipc/engines';
+import { ErrorBanner } from '../../components/ErrorBanner';
+import { mapBackendError } from '../../utils/errors';
 
 type MetricType = 'revenue' | 'customers';
 type ValueType = 'percentage' | 'absolute';
 
-export const CohortView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
+import { useWorkspaceStore } from '../../store/workspace';
+
+export const CohortView: React.FC = () => {
     const { data, isLoading, error, fetchData } = useCohortStore();
     const [metricType, setMetricType] = useState<MetricType>('revenue');
     const [valueType, setValueType] = useState<ValueType>('percentage');
 
+    const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
+
     useEffect(() => {
-        if (activeWorkspaceId) fetchData(activeWorkspaceId);
+        if (activeWorkspaceId) fetchData();
     }, [activeWorkspaceId, fetchData]);
 
     const option = useMemo(() => {
@@ -154,14 +160,16 @@ export const CohortView: React.FC<{ activeWorkspaceId: string }> = ({ activeWork
     }
 
     if (error) {
-        return (
-            <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
-                <div className="glass-panel p-6" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
-                    <h2 className="page-title" style={{ fontSize: '1.25rem', color: 'var(--status-danger)' }}>Error Loading Cohorts</h2>
-                    <p className="text-muted" style={{ marginTop: '0.5rem' }}>{error}</p>
+        const mappedError = mapBackendError(error);
+        if (mappedError) {
+            return (
+                <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
+                    <div style={{ width: '100%', maxWidth: '600px' }}>
+                        <ErrorBanner error={mappedError} onClear={() => useCohortStore.setState({ error: null })} />
+                    </div>
                 </div>
-            </div>
-        );
+            );
+        }
     }
 
     return (

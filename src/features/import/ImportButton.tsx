@@ -2,10 +2,8 @@ import React, { useRef, useState } from 'react';
 import { importPreview, importCommit, PreviewResult } from '../../lib/ipc/import';
 import { useFinancialsStore } from '../../store/financials';
 import { useCohortStore } from '../../store/cohort';
-
-interface Props {
-    activeWorkspaceId: string;
-}
+import { useWorkspaceStore } from '../../store/workspace';
+import { open } from '@tauri-apps/plugin-dialog';
 
 type Phase =
     | { tag: 'idle' }
@@ -15,34 +13,26 @@ type Phase =
     | { tag: 'success'; rowCount: number }
     | { tag: 'error'; message: string };
 
-export const ImportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
+export const ImportButton: React.FC = () => {
     const inputRef = useRef<HTMLInputElement>(null);
     const [phase, setPhase] = useState<Phase>({ tag: 'idle' });
     const fetchFinancials = useFinancialsStore(s => s.fetchData);
     const fetchCohort = useCohortStore(s => s.fetchData);
 
-    const openPicker = () => {
+    const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
+
+    const openPicker = async () => {
         if (!activeWorkspaceId) return;
-        inputRef.current?.click();
-    };
-
-    const onFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        // Reset file input so the same file can be re-selected
-        e.target.value = '';
-
-        // Tauri exposes the real OS path on the File object
-        const filePath: string = (file as unknown as { path: string }).path;
-        if (!filePath) {
-            setPhase({ tag: 'error', message: 'Could not read file path. Try dragging the file or use the Tauri file dialog.' });
-            return;
-        }
-
-        setPhase({ tag: 'loading', message: 'Analyzing file…' });
         try {
-            const result = await importPreview(activeWorkspaceId, filePath);
+            const selected = await open({
+                multiple: false,
+                filters: [{ name: 'Data Files', extensions: ['csv', 'xlsx', 'xls'] }]
+            });
+            if (selected === null) return;
+            
+            const filePath = selected as string;
+            setPhase({ tag: 'loading', message: 'Analyzing file…' });
+            const result = await importPreview(filePath);
             setPhase({ tag: 'preview', result, filePath });
         } catch (err: unknown) {
             setPhase({ tag: 'error', message: String(err) });
@@ -54,12 +44,12 @@ export const ImportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
         const { filePath } = phase;
         setPhase({ tag: 'committing' });
         try {
-            const rowCount = await importCommit(activeWorkspaceId, filePath);
+            const rowCount = await importCommit(filePath);
             setPhase({ tag: 'success', rowCount });
             // Refresh all data stores
             await Promise.all([
-                fetchFinancials(activeWorkspaceId),
-                fetchCohort(activeWorkspaceId),
+                fetchFinancials(),
+                fetchCohort(),
             ]);
         } catch (err: unknown) {
             setPhase({ tag: 'error', message: String(err) });
@@ -72,15 +62,6 @@ export const ImportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
 
     return (
         <>
-            {/* Hidden file input */}
-            <input
-                ref={inputRef}
-                type="file"
-                accept=".csv,.xlsx,.xls"
-                style={{ display: 'none' }}
-                onChange={onFileSelected}
-            />
-
             {/* Nav button */}
             <button
                 id="import-btn"

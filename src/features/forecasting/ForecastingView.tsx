@@ -2,8 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ForecastMovement, getForecast } from '../../lib/ipc/engines';
 import { ForecastChart } from '../../charts/ForecastChart';
 import { MetricCard } from '../dashboard/MetricCard';
+import { ErrorBanner } from '../../components/ErrorBanner';
+import { mapBackendError } from '../../utils/errors';
 
-export const ForecastingView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
+import { useWorkspaceStore } from '../../store/workspace';
+
+export const ForecastingView: React.FC = () => {
+    const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
     const [churnRate, setChurnRate] = useState<number>(2.0); // 2.0%
     const [expansionRate, setExpansionRate] = useState<number>(3.0); // 3.0%
     const [newMrr, setNewMrr] = useState<number>(1000); // $1,000
@@ -20,7 +25,7 @@ export const ForecastingView: React.FC<{ activeWorkspaceId: string }> = ({ activ
         const startTime = performance.now();
         
         try {
-            const data = await getForecast(activeWorkspaceId, {
+            const data = await getForecast({
                 monthly_churn_rate: churn / 100.0,
                 monthly_expansion_rate: exp / 100.0,
                 new_mrr_per_month: newM
@@ -82,10 +87,8 @@ export const ForecastingView: React.FC<{ activeWorkspaceId: string }> = ({ activ
                 )}
             </header>
 
-            {error && (
-                <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--status-danger)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                    {error}
-                </div>
+            {error && mapBackendError(error) && (
+                <ErrorBanner error={mapBackendError(error)} onClear={() => setError(null)} />
             )}
 
             <div className="grid-cards">

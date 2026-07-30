@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invokeWorkspace } from './client';
 
 export interface CsvExportResult {
     mrr_csv: string;
@@ -6,12 +6,12 @@ export interface CsvExportResult {
     cohorts_csv: string;
 }
 
-export async function exportCsv(workspaceId: string): Promise<CsvExportResult> {
-    return await invoke<CsvExportResult>('csv_export', { workspace_id: workspaceId });
+export async function exportCsv(): Promise<CsvExportResult> {
+    return await invokeWorkspace<CsvExportResult>('csv_export');
 }
 
-export async function exportPdf(workspaceId: string): Promise<number[]> {
-    return await invoke<number[]>('pdf_export', { workspace_id: workspaceId });
+export async function exportPdf(): Promise<number[]> {
+    return await invokeWorkspace<number[]>('pdf_export');
 }
 
 export function downloadBlob(content: string | Uint8Array | number[], filename: string, mimeType: string) {

@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invokeWorkspace } from './client';
 
 export interface MrrLogRow {
     rowid: number;
@@ -18,15 +18,13 @@ export interface MrrLogAddPayload {
 }
 
 export async function listMrrLog(
-    workspaceId: string,
     search: string = '',
     sortBy: string = 'period',
     sortDir: string = 'DESC',
     offset: number = 0,
     limit: number = 50,
 ): Promise<MrrLogRow[]> {
-    return await invoke<MrrLogRow[]>('mrr_log_list', {
-        workspace_id: workspaceId,
+    return await invokeWorkspace<MrrLogRow[]>('mrr_log_list', {
         search,
         sort_by: sortBy,
         sort_dir: sortDir,
@@ -35,18 +33,18 @@ export async function listMrrLog(
     });
 }
 
-export async function countMrrLog(workspaceId: string, search: string = ''): Promise<number> {
-    return await invoke<number>('mrr_log_count', { workspace_id: workspaceId, search });
+export async function countMrrLog(search: string = ''): Promise<number> {
+    return await invokeWorkspace<number>('mrr_log_count', { search });
 }
 
-export async function addMrrLog(workspaceId: string, row: MrrLogAddPayload): Promise<void> {
-    return await invoke<void>('mrr_log_add', { workspace_id: workspaceId, row });
+export async function addMrrLog(row: MrrLogAddPayload): Promise<void> {
+    return await invokeWorkspace<void>('mrr_log_add', { row });
 }
 
-export async function requestDeleteMrrLog(workspaceId: string, rowid: number): Promise<string> {
-    return await invoke<string>('mrr_log_delete_request', { workspace_id: workspaceId, rowid });
+export async function requestDeleteMrrLog(rowid: number): Promise<string> {
+    return await invokeWorkspace<string>('mrr_log_delete_request', { rowid });
 }
 
-export async function confirmDeleteMrrLog(workspaceId: string, rowid: number, token: string): Promise<MrrLogRow> {
-    return await invoke<MrrLogRow>('mrr_log_delete_confirm', { workspace_id: workspaceId, rowid, token });
+export async function confirmDeleteMrrLog(rowid: number, token: string): Promise<MrrLogRow> {
+    return await invokeWorkspace<MrrLogRow>('mrr_log_delete_confirm', { rowid, token });
 }

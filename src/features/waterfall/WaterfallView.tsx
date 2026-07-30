@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useFinancialsStore } from '../../store/financials';
 import { WaterfallChart } from '../../charts/WaterfallChart';
+import { ErrorBanner } from '../../components/ErrorBanner';
+import { mapBackendError } from '../../utils/errors';
 
-interface Props { activeWorkspaceId: string; }
+import { useWorkspaceStore } from '../../store/workspace';
 
-export const WaterfallView: React.FC<Props> = ({ activeWorkspaceId }) => {
+export const WaterfallView: React.FC = () => {
     const { mrr, isLoading, error, fetchData } = useFinancialsStore();
+    const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
     const [selectedMonth, setSelectedMonth] = useState<string>('');
 
     useEffect(() => {
         if (activeWorkspaceId) {
-            fetchData(activeWorkspaceId);
+            fetchData();
         }
     }, [activeWorkspaceId, fetchData]);
 
@@ -29,14 +32,16 @@ export const WaterfallView: React.FC<Props> = ({ activeWorkspaceId }) => {
     }
 
     if (error) {
-        return (
-            <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
-                <div className="glass-panel p-6" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
-                    <h2 className="page-title" style={{ fontSize: '1.25rem', color: 'var(--status-danger)' }}>Error Loading Waterfall</h2>
-                    <p className="text-muted" style={{ marginTop: '0.5rem' }}>{error}</p>
+        const mappedError = mapBackendError(error);
+        if (mappedError) {
+            return (
+                <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
+                    <div style={{ width: '100%', maxWidth: '600px' }}>
+                        <ErrorBanner error={mappedError} onClear={() => useFinancialsStore.setState({ error: null })} />
+                    </div>
                 </div>
-            </div>
-        );
+            );
+        }
     }
 
     const data = mrr.find(m => m.month === selectedMonth);

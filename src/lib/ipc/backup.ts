@@ -1,17 +1,17 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invokeWorkspace } from './client';
 
-export async function listBackups(workspaceId: string): Promise<string[]> {
-    return await invoke<string[]>('backup_list', { workspace_id: workspaceId });
+export async function listBackups(): Promise<string[]> {
+    return await invokeWorkspace<string[]>('backup_list');
 }
 
-export async function createBackup(workspaceId: string): Promise<string> {
-    return await invoke<string>('backup_create', { workspace_id: workspaceId });
+export async function createBackup(): Promise<string> {
+    return await invokeWorkspace<string>('backup_create');
 }
 
-export async function requestRestore(workspaceId: string, filename: string): Promise<string> {
-    return await invoke<string>('backup_restore_request', { workspace_id: workspaceId, filename });
+export async function requestRestore(filename: string): Promise<string> {
+    return await invokeWorkspace<string>('backup_restore_request', { filename });
 }
 
-export async function confirmRestore(workspaceId: string, filename: string, token: string): Promise<void> {
-    await invoke('backup_restore_confirm', { workspace_id: workspaceId, filename, token });
+export async function confirmRestore(filename: string, token: string): Promise<void> {
+    await invokeWorkspace('backup_restore_confirm', { filename, token });
 }

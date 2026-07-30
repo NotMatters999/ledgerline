@@ -9,14 +9,17 @@ import {
     MrrLogAddPayload,
 } from '../../lib/ipc/data';
 import { useFinancialsStore } from '../../store/financials';
+import { useWorkspaceStore } from '../../store/workspace';
 import { ImportButton } from '../import/ImportButton';
 import { ExportButton } from '../export/ExportButton';
 import { InlineConfirm } from '../../components/InlineConfirm';
+import { ErrorBanner } from '../../components/ErrorBanner';
+import { mapBackendError } from '../../utils/errors';
 import { validateMrrAmount } from '../../utils/math';
 
 const PAGE_SIZE = 50;
 
-export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
+export const DataManagementView: React.FC = () => {
     const [rows, setRows] = useState<MrrLogRow[]>([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(0);
@@ -43,6 +46,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
     const [formError, setFormError] = useState<string | null>(null);
 
     const fetchData = useFinancialsStore(s => s.fetchData);
+    const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
     const hasWorkspace = Boolean(activeWorkspaceId);
 
     const loadRows = useCallback(async (p: number, q: string, sb: string, sd: string) => {
@@ -57,8 +61,8 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
         setError(null);
         try {
             const [data, count] = await Promise.all([
-                listMrrLog(activeWorkspaceId, q, sb, sd, p * PAGE_SIZE, PAGE_SIZE),
-                countMrrLog(activeWorkspaceId, q),
+                listMrrLog(q, sb, sd, p * PAGE_SIZE, PAGE_SIZE),
+                countMrrLog(q),
             ]);
             setRows(data);
             setTotal(count);
@@ -90,7 +94,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
     const handleRequestDelete = async (row: MrrLogRow) => {
         if (!activeWorkspaceId) return;
         try {
-            const token = await requestDeleteMrrLog(activeWorkspaceId, row.rowid);
+            const token = await requestDeleteMrrLog(row.rowid);
             setDeletingRow({ rowid: row.rowid, token });
         } catch (e: any) {
             setError(e?.toString() ?? 'Delete request failed');
@@ -101,10 +105,10 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
         if (!activeWorkspaceId || !deletingRow) return;
 
         try {
-            await confirmDeleteMrrLog(activeWorkspaceId, deletingRow.rowid, deletingRow.token);
+            await confirmDeleteMrrLog(deletingRow.rowid, deletingRow.token);
             setDeletingRow(null);
             await refreshRows(page);
-            await fetchData(activeWorkspaceId);
+            await fetchData();
         } catch (e: any) {
             setError(e?.toString() ?? 'Delete failed');
             setDeletingRow(null);
@@ -125,12 +129,12 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                 ...formData,
                 mrr_amount: parsedAmount,
             };
-            await addMrrLog(activeWorkspaceId, payload);
+            await addMrrLog(payload);
             setShowAddForm(false);
             setFormData({ customer_id: '', period: new Date().toISOString().slice(0, 10), mrr_amount: '0', currency: 'USD', category: 'Standard' });
             setPage(0);
             await refreshRows(0);
-            await fetchData(activeWorkspaceId);
+            await fetchData();
         } catch (e: any) {
             setFormError(e?.toString() ?? 'Add failed');
         } finally {
@@ -168,8 +172,8 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                     }}
                 />
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                    <ImportButton activeWorkspaceId={activeWorkspaceId} />
-                    <ExportButton activeWorkspaceId={activeWorkspaceId} />
+                    <ImportButton />
+                    <ExportButton />
                     <button
                         className="nav-item active"
                         onClick={() => setShowAddForm(v => !v)}
@@ -184,10 +188,8 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
             {showAddForm && (
                 <div className="glass-panel p-6" style={{ borderColor: 'var(--accent-primary)' }}>
                     <h3 className="card-title" style={{ marginBottom: '1rem' }}>Add MRR Record</h3>
-                    {formError && (
-                        <div style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--status-danger)', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
-                            {formError}
-                        </div>
+                    {formError && mapBackendError(formError) && (
+                        <ErrorBanner error={mapBackendError(formError)} onClear={() => setFormError(null)} />
                     )}
                     <form onSubmit={handleAdd} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px,1fr))', gap: '0.75rem', alignItems: 'end' }}>
                         {[
@@ -233,10 +235,8 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
             {/* Undo toast removed for strict 2-step delete */}
 
             {/* Error */}
-            {error && (
-                <div style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--status-danger)', padding: '0.75rem 1rem', borderRadius: '0.5rem', fontSize: '0.875rem' }}>
-                    {error}
-                </div>
+            {error && mapBackendError(error) && (
+                <ErrorBanner error={mapBackendError(error)} onClear={() => setError(null)} />
             )}
 
             {/* Table */}
@@ -271,7 +271,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                                     <div style={{ marginBottom: '1rem' }}>
                                         No records found{search ? ' matching your search' : '. Import CSV or Excel data to get started.'}
                                     </div>
-                                    {!search && <ImportButton activeWorkspaceId={activeWorkspaceId} />}
+                                    {!search && <ImportButton />}
                                 </td>
                             </tr>
                         ) : rows.map(row => (

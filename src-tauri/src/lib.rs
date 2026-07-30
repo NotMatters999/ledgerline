@@ -28,6 +28,7 @@ fn greet(name: &str) -> String {
 pub fn run() {
     let start_time = std::time::Instant::now();
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(move |app| {
             // Resolve an app data dir but avoid panicking if the platform API returns None.

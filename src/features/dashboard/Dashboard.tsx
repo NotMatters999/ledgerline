@@ -3,15 +3,19 @@ import { useFinancialsStore } from '../../store/financials';
 import { MetricCard } from './MetricCard';
 import { MrrChart } from './MrrChart';
 import { RetentionChart } from '../../charts/RetentionChart';
+import { ErrorBanner } from '../../components/ErrorBanner';
+import { mapBackendError } from '../../utils/errors';
 
-interface Props { activeWorkspaceId: string; }
+import { useWorkspaceStore } from '../../store/workspace';
 
-export const Dashboard: React.FC<Props> = ({ activeWorkspaceId }) => {
+export const Dashboard: React.FC = () => {
     const { mrr, arr, retention, isLoading, error, fetchData } = useFinancialsStore();
+
+    const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
 
     useEffect(() => {
         if (activeWorkspaceId) {
-            fetchData(activeWorkspaceId);
+            fetchData();
         }
     }, [activeWorkspaceId, fetchData]);
 
@@ -23,15 +27,17 @@ export const Dashboard: React.FC<Props> = ({ activeWorkspaceId }) => {
         );
     }
 
-    if (error) {
-        return (
-            <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
-                <div className="glass-panel p-6" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
-                    <h2 className="page-title" style={{ fontSize: '1.25rem', color: 'var(--status-danger)' }}>Error Loading Dashboard</h2>
-                    <p className="text-muted" style={{ marginTop: '0.5rem' }}>{error}</p>
+    if (error && mrr.length === 0 && retention.length === 0) {
+        const mappedError = mapBackendError(error);
+        if (mappedError) {
+            return (
+                <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
+                    <div style={{ width: '100%', maxWidth: '600px' }}>
+                        <ErrorBanner error={mappedError} onClear={() => useFinancialsStore.setState({ error: null })} />
+                    </div>
                 </div>
-            </div>
-        );
+            );
+        }
     }
 
     const currentMrr = mrr.length > 0 ? mrr[mrr.length - 1].ending : 0;

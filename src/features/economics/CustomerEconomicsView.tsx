@@ -2,17 +2,22 @@ import React, { useEffect, useMemo } from 'react';
 import { useFinancialsStore } from '../../store/financials';
 import { CoreChart } from '../../charts/CoreChart';
 import { Tooltip } from '../../components/Tooltip';
+import { ErrorBanner } from '../../components/ErrorBanner';
+import { mapBackendError } from '../../utils/errors';
+
+import { useWorkspaceStore } from '../../store/workspace';
 
 /**
  * Customer Economics View
  * Surface ARPA, customer count trends, expansion vs contraction, and reactivation.
  * All data derived from existing mrr_get / ltv_get store data — no new Rust commands needed.
  */
-export const CustomerEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
+export const CustomerEconomicsView: React.FC = () => {
     const { mrr, ltv, isLoading, error, fetchData } = useFinancialsStore();
+    const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
 
     useEffect(() => {
-        if (activeWorkspaceId && mrr.length === 0) fetchData(activeWorkspaceId);
+        if (activeWorkspaceId && mrr.length === 0) fetchData();
     }, [activeWorkspaceId, mrr.length, fetchData]);
 
     const latest = mrr.length > 0 ? mrr[mrr.length - 1] : null;
@@ -159,14 +164,16 @@ export const CustomerEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({
     }
 
     if (error && mrr.length === 0) {
-        return (
-            <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
-                <div className="glass-panel p-6" style={{ background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.2)' }}>
-                    <h2 className="page-title" style={{ fontSize: '1.25rem', color: 'var(--status-danger)' }}>Error Loading Customer Economics</h2>
-                    <p className="text-muted" style={{ marginTop: '0.5rem' }}>{error}</p>
+        const mappedError = mapBackendError(error);
+        if (mappedError) {
+            return (
+                <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
+                    <div style={{ width: '100%', maxWidth: '600px' }}>
+                        <ErrorBanner error={mappedError} onClear={() => useFinancialsStore.setState({ error: null })} />
+                    </div>
                 </div>
-            </div>
-        );
+            );
+        }
     }
 
     return (

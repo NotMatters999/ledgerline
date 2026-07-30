@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invokeWorkspace } from './client';
 
 export interface MrrMovement {
     month: string;
@@ -79,34 +79,34 @@ export interface CohortData {
     rows: CohortRow[];
 }
 
-export async function getMrr(workspaceId: string): Promise<MrrMovement[]> {
-    return await invoke<MrrMovement[]>('mrr_get', { workspace_id: workspaceId });
+export async function getMrr(): Promise<MrrMovement[]> {
+    return await invokeWorkspace<MrrMovement[]>('mrr_get');
 }
 
-export async function getArr(workspaceId: string): Promise<ArrMovement[]> {
-    return await invoke<ArrMovement[]>('arr_get', { workspace_id: workspaceId });
+export async function getArr(): Promise<ArrMovement[]> {
+    return await invokeWorkspace<ArrMovement[]>('arr_get');
 }
 
-export async function getRetention(workspaceId: string): Promise<RetentionMovement[]> {
-    return await invoke<RetentionMovement[]>('retention_get', { workspace_id: workspaceId });
+export async function getRetention(): Promise<RetentionMovement[]> {
+    return await invokeWorkspace<RetentionMovement[]>('retention_get');
 }
 
-export async function getLtv(workspaceId: string): Promise<LtvMovement[]> {
-    return await invoke<LtvMovement[]>('ltv_get', { workspace_id: workspaceId });
+export async function getLtv(): Promise<LtvMovement[]> {
+    return await invokeWorkspace<LtvMovement[]>('ltv_get');
 }
 
-export async function getCac(workspaceId: string): Promise<CacMovement[]> {
-    return await invoke<CacMovement[]>('cac_get', { workspace_id: workspaceId });
+export async function getCac(): Promise<CacMovement[]> {
+    return await invokeWorkspace<CacMovement[]>('cac_get');
 }
 
-export async function getPayback(workspaceId: string): Promise<PaybackMovement[]> {
-    return await invoke<PaybackMovement[]>('payback_get', { workspace_id: workspaceId });
+export async function getPayback(): Promise<PaybackMovement[]> {
+    return await invokeWorkspace<PaybackMovement[]>('payback_get');
 }
 
-export async function getForecast(workspaceId: string, params: ForecastParams): Promise<ForecastMovement[]> {
-    return await invoke<ForecastMovement[]>('forecast_get', { workspace_id: workspaceId, params });
+export async function getForecast(params: ForecastParams): Promise<ForecastMovement[]> {
+    return await invokeWorkspace<ForecastMovement[]>('forecast_get', { params });
 }
 
-export async function getCohort(workspaceId: string): Promise<CohortData> {
-    return await invoke<CohortData>('cohort_get', { workspace_id: workspaceId });
+export async function getCohort(): Promise<CohortData> {
+    return await invokeWorkspace<CohortData>('cohort_get');
 }

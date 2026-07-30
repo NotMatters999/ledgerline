@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invokeWorkspace } from './client';
 
 export interface MappedColumns {
     customer_id_idx: number | null;
@@ -21,10 +21,10 @@ export interface ValidationError {
     reason: string;
 }
 
-export async function importPreview(workspaceId: string, filePath: string): Promise<PreviewResult> {
-    return await invoke<PreviewResult>('import_preview', { workspace_id: workspaceId, file_path: filePath });
+export async function importPreview(filePath: string): Promise<PreviewResult> {
+    return await invokeWorkspace<PreviewResult>('import_preview', { file_path: filePath });
 }
 
-export async function importCommit(workspaceId: string, filePath: string): Promise<number> {
-    return await invoke<number>('import_commit', { workspace_id: workspaceId, file_path: filePath });
+export async function importCommit(filePath: string): Promise<number> {
+    return await invokeWorkspace<number>('import_commit', { file_path: filePath });
 }

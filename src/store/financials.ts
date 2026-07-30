@@ -15,7 +15,7 @@ interface FinancialsState {
     cac: CacMovement[];
     payback: PaybackMovement[];
 
-    fetchData: (workspaceId: string) => Promise<void>;
+    fetchData: () => Promise<void>;
     clear: () => void;
 }
 
@@ -30,17 +30,17 @@ export const useFinancialsStore = create<FinancialsState>((set) => ({
     cac: [],
     payback: [],
 
-    fetchData: async (workspaceId: string) => {
+    fetchData: async () => {
         set({ isLoading: true, error: null });
         try {
             // Parallel fetch to respect Section 10 IPC single-responsibility rule
             const [mrr, arr, retention, ltv, cac, payback] = await Promise.all([
-                getMrr(workspaceId),
-                getArr(workspaceId),
-                getRetention(workspaceId),
-                getLtv(workspaceId),
-                getCac(workspaceId),
-                getPayback(workspaceId),
+                getMrr(),
+                getArr(),
+                getRetention(),
+                getLtv(),
+                getCac(),
+                getPayback(),
             ]);
             
             set({
