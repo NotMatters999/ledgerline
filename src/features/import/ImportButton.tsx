@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { importPreview, importCommit, PreviewResult } from '../../lib/ipc/import';
 import { useFinancialsStore } from '../../store/financials';
 import { useCohortStore } from '../../store/cohort';
@@ -14,7 +14,6 @@ type Phase =
     | { tag: 'error'; message: string };
 
 export const ImportButton: React.FC = () => {
-    const inputRef = useRef<HTMLInputElement>(null);
     const [phase, setPhase] = useState<Phase>({ tag: 'idle' });
     const fetchFinancials = useFinancialsStore(s => s.fetchData);
     const fetchCohort = useCohortStore(s => s.fetchData);

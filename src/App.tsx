@@ -32,16 +32,16 @@ function App() {
   // Whenever the active workspace changes, refetch all stores with the correct ID
   useEffect(() => {
     if (activeId) {
-      fetchFinancials(activeId);
-      fetchCohort(activeId);
+      fetchFinancials();
+      fetchCohort();
     }
   }, [activeId, fetchFinancials, fetchCohort]);
 
   // Called by WorkspaceSwitcher after any create/switch/delete
   const handleActiveIdChange = useCallback((newId: string) => {
     if (newId) {
-      fetchFinancials(newId);
-      fetchCohort(newId);
+      fetchFinancials();
+      fetchCohort();
     }
   }, [fetchFinancials, fetchCohort]);
 
