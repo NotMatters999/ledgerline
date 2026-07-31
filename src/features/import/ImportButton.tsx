@@ -33,8 +33,8 @@ export const ImportButton: React.FC = () => {
             setPhase({ tag: 'loading', message: 'Analyzing file…' });
             const result = await importPreview(filePath);
             setPhase({ tag: 'preview', result, filePath });
-        } catch (err: unknown) {
-            setPhase({ tag: 'error', message: String(err) });
+        } catch (err: any) {
+            setPhase({ tag: 'error', message: err instanceof Error ? err.message : (typeof err === 'string' ? err : (JSON.stringify(err) || String(err))) });
         }
     };
 
@@ -50,8 +50,8 @@ export const ImportButton: React.FC = () => {
                 fetchFinancials(),
                 fetchCohort(),
             ]);
-        } catch (err: unknown) {
-            setPhase({ tag: 'error', message: String(err) });
+        } catch (err: any) {
+            setPhase({ tag: 'error', message: err instanceof Error ? err.message : (typeof err === 'string' ? err : (JSON.stringify(err) || String(err))) });
         }
     };
 

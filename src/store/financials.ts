@@ -53,7 +53,7 @@ export const useFinancialsStore = create<FinancialsState>((set) => ({
                 isLoading: false
             });
         } catch (error: any) {
-            set({ error: error.toString(), isLoading: false });
+            set({ error: error instanceof Error ? error.message : (typeof error === 'string' ? error : (JSON.stringify(error) || String(error))), isLoading: false });
         }
     },
 

@@ -35,8 +35,13 @@ export const UnitEconomicsView: React.FC = () => {
     }, [activeWorkspaceId, fetchData]);
 
     useEffect(() => {
-        if (mrr.length > 0 && !spendPeriodInput) {
-            setSpendPeriodInput(mrr[mrr.length - 1].month);
+        if (mrr.length > 0) {
+            const isValid = mrr.some(m => m.month === spendPeriodInput);
+            if (!isValid) {
+                setSpendPeriodInput(mrr[mrr.length - 1].month);
+            }
+        } else {
+            if (spendPeriodInput !== '') setSpendPeriodInput('');
         }
     }, [mrr, spendPeriodInput]);
 
@@ -53,7 +58,7 @@ export const UnitEconomicsView: React.FC = () => {
             await setSetting('gross_margin', decimal.toString());
             await fetchData();
         } catch (err: any) {
-            setActionError(err.toString());
+            setActionError(err instanceof Error ? err.message : (typeof err === 'string' ? err : (JSON.stringify(err) || String(err))));
         } finally {
             setSubmittingMargin(false);
         }
@@ -76,13 +81,13 @@ export const UnitEconomicsView: React.FC = () => {
             setSpendAmountInput('');
             await fetchData();
         } catch (err: any) {
-            setActionError(err.toString());
+            setActionError(err instanceof Error ? err.message : (typeof err === 'string' ? err : (JSON.stringify(err) || String(err))));
         } finally {
             setSubmittingSpend(false);
         }
     };
 
-    if (isLoading) {
+    if (isLoading && mrr.length === 0) {
         return (
             <div className="flex-center" style={{ height: '100%', color: 'var(--text-primary)' }}>
                 <div className="spinner"></div>
@@ -90,7 +95,7 @@ export const UnitEconomicsView: React.FC = () => {
         );
     }
 
-    if (error) {
+    if (error && mrr.length === 0) {
         const mappedError = mapBackendError(error);
         if (mappedError) {
             return (

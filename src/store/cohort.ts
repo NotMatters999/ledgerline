@@ -20,7 +20,7 @@ export const useCohortStore = create<CohortState>((set) => ({
             const data = await getCohort();
             set({ data, isLoading: false });
         } catch (error: any) {
-            set({ error: error.toString(), isLoading: false });
+            set({ error: error instanceof Error ? error.message : (typeof error === 'string' ? error : (JSON.stringify(error) || String(error))), isLoading: false });
         }
     },
     

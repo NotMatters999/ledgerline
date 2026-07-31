@@ -97,7 +97,7 @@ export const DataManagementView: React.FC = () => {
             const token = await requestDeleteMrrLog(row.rowid);
             setDeletingRow({ rowid: row.rowid, token });
         } catch (e: any) {
-            setError(e?.toString() ?? 'Delete request failed');
+            setError(e instanceof Error ? e.message : (typeof e === 'string' ? e : (JSON.stringify(e) || String(e))));
         }
     };
 
@@ -110,7 +110,7 @@ export const DataManagementView: React.FC = () => {
             await refreshRows(page);
             await fetchData();
         } catch (e: any) {
-            setError(e?.toString() ?? 'Delete failed');
+            setError(e instanceof Error ? e.message : (typeof e === 'string' ? e : (JSON.stringify(e) || String(e))));
             setDeletingRow(null);
         }
     };
@@ -136,7 +136,7 @@ export const DataManagementView: React.FC = () => {
             await refreshRows(0);
             await fetchData();
         } catch (e: any) {
-            setFormError(e?.toString() ?? 'Add failed');
+            setFormError(e instanceof Error ? e.message : (typeof e === 'string' ? e : (JSON.stringify(e) || String(e))));
         } finally {
             setSubmitting(false);
         }
@@ -271,7 +271,6 @@ export const DataManagementView: React.FC = () => {
                                     <div style={{ marginBottom: '1rem' }}>
                                         No records found{search ? ' matching your search' : '. Import CSV or Excel data to get started.'}
                                     </div>
-                                    {!search && <ImportButton />}
                                 </td>
                             </tr>
                         ) : rows.map(row => (
