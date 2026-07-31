@@ -10,8 +10,12 @@ pub struct Workspace {
     pub name: String,
     pub created_at: DateTime<Utc>,
     pub last_accessed: DateTime<Utc>,
-    #[serde(skip)]
+    #[serde(default = "crate::workspace::manager::default_db_path")]
     pub db_path: PathBuf,
+}
+
+fn default_db_path() -> PathBuf {
+    PathBuf::from("workspace.duckdb")
 }
 
 #[derive(Debug, thiserror::Error)]
