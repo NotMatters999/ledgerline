@@ -18,6 +18,7 @@ export async function invokeWorkspace<T>(cmd: string, args: InvokeArgs = {}): Pr
     if (!activeId) {
         throw new Error("No active workspace selected.");
     }
-    const finalArgs = { ...args, workspace_id: activeId };
+    // Provide strict camelCase workspaceId as required by Tauri v2
+    const finalArgs = { ...args, workspaceId: activeId };
     return tauriInvoke<T>(cmd, finalArgs);
 }

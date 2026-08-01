@@ -28,6 +28,7 @@ export function mapBackendError(error: unknown): string | null {
         return 'One or more dates in your file are improperly formatted. Please use a recognized format (e.g. YYYY-MM-DD).';
     }
 
-    // Default fallback
-    return `An unexpected error occurred: ${msg}`;
+    // Default fallback: do not expose raw IPC errors to the user
+    console.error("LedgerLine Backend Error:", msg);
+    return `An unexpected error occurred. Please try again or restart the application.`;
 }

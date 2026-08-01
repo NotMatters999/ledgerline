@@ -7,9 +7,10 @@ use crate::utils::error::LedgerlineError;
 use crate::utils::logger::log_info;
 
 #[tauri::command]
-pub fn import_preview(workspace_id: String, file_path: String, _state: State<'_, AppState>) -> Result<PreviewResult, LedgerlineError> {
-    let _ = workspace_id;
-    // Just run preview
+pub fn import_preview(_workspace_id: String, file_path: String, _state: State<'_, AppState>) -> Result<PreviewResult, LedgerlineError> {
+    // Preview is a stateless file analysis operation — it does not touch the workspace DB.
+    // The workspace_id is accepted (prefixed with _ to suppress unused-variable warning) so
+    // Tauri's argument deserializer correctly receives the workspaceId the frontend injects.
     preview(PathBuf::from(file_path).as_path()).map_err(LedgerlineError::from)
 }
 
