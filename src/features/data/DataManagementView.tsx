@@ -67,7 +67,12 @@ export const DataManagementView: React.FC = () => {
             setRows(data);
             setTotal(count);
         } catch (e: unknown) {
-            setError((e as Error)?.message ?? String(e));
+            // Tauri IPC errors are plain strings, not JS Error objects.
+            // Log the raw error to devtools so the real cause is visible.
+            console.error('[DataManagementView] loadRows error (raw):', e);
+            const msg = typeof e === 'string' ? e
+                : (e instanceof Error ? e.message : JSON.stringify(e));
+            setError(msg);
         } finally {
             setIsLoading(false);
         }
@@ -136,7 +141,11 @@ export const DataManagementView: React.FC = () => {
             await refreshRows(0);
             await fetchData();
         } catch (e: any) {
-            setFormError(e instanceof Error ? e.message : (typeof e === 'string' ? e : (JSON.stringify(e) || String(e))));
+            // Log raw error before mapping to friendly message
+            console.error('[DataManagementView] handleAdd error (raw):', e);
+            const msg = typeof e === 'string' ? e
+                : (e instanceof Error ? e.message : JSON.stringify(e));
+            setFormError(msg);
         } finally {
             setSubmitting(false);
         }
@@ -188,8 +197,11 @@ export const DataManagementView: React.FC = () => {
             {showAddForm && (
                 <div className="glass-panel p-6" style={{ borderColor: 'var(--accent-primary)' }}>
                     <h3 className="card-title" style={{ marginBottom: '1rem' }}>Add MRR Record</h3>
-                    {formError && mapBackendError(formError) && (
-                        <ErrorBanner error={mapBackendError(formError)} onClear={() => setFormError(null)} />
+                    {formError && (
+                        <ErrorBanner
+                            error={mapBackendError(formError) ?? formError}
+                            onClear={() => setFormError(null)}
+                        />
                     )}
                     <form onSubmit={handleAdd} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px,1fr))', gap: '0.75rem', alignItems: 'end' }}>
                         {[

@@ -49,11 +49,11 @@ export function computeWaterfall(movement: MrrMovement): WaterfallPayload {
             isTotal.push(true);
             currentTotal += amounts[i];
         } else if (i === categories.length - 1) {
-            // Ending is a total column
+            // Ending is a total column — base is 0, height is the running total
             base.push(0);
             value.push(currentTotal);
             colors.push(COLOR_TOTAL);
-            isTotal.push(true);
+            isTotal.push(true); // ← was missing: caused isTotal array to be length 6 vs 7
         } else {
             const amount = amounts[i];
             isTotal.push(false);

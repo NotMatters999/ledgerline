@@ -206,6 +206,7 @@ body {
   font-weight: 600;
   font-size: 1.125rem;
   letter-spacing: 0.025em;
+  flex-shrink: 0;
 }
 
 .nav-logo-icon {
@@ -231,6 +232,7 @@ body {
   border: 1px solid var(--border-color);
   overflow-x: auto;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .nav-menu::-webkit-scrollbar {
@@ -250,6 +252,8 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .nav-item:hover {
@@ -319,6 +323,24 @@ body {
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
   transition: all var(--transition-fast);
+}
+
+/* For <select> elements: strip native OS chrome and apply dark styling */
+select.input-field {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394A3B8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2rem;
+  cursor: pointer;
+}
+
+/* Style <option> elements for WebView2/Chromium-based webviews */
+select.input-field option {
+  background-color: #151A23;
+  color: var(--text-primary);
 }
 
 .input-field:focus {
