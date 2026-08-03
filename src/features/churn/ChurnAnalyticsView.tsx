@@ -34,7 +34,7 @@ export const ChurnAnalyticsView: React.FC = () => {
         : '—';
     const newVsChurn = latestMrr && latestMrr.churn > 0
         ? (latestMrr.new / latestMrr.churn).toFixed(2)
-        : '—';
+        : 'N/A';
 
     // ── Trend charts ─────────────────────────────────────────────────────────
     const churnTrendOption = useMemo(() => {
@@ -81,8 +81,9 @@ export const ChurnAnalyticsView: React.FC = () => {
                     name: 'Churned Customers',
                     type: 'line',
                     yAxisIndex: 1,
-                    smooth: true,
-                    showSymbol: false,
+                    smooth: false, // Rate can be 0 for many months — smoothing implies a gradual rise that doesn't exist
+                    showSymbol: true,
+                    symbolSize: 4,
                     lineStyle: { color: '#F43F5E', width: 2, type: 'dashed' },
                     itemStyle: { color: '#F43F5E' },
                     data: churnedCustomers,
@@ -117,8 +118,10 @@ export const ChurnAnalyticsView: React.FC = () => {
                 {
                     name: 'Logo Churn %',
                     type: 'line',
-                    smooth: true,
-                    showSymbol: false,
+                    smooth: false, // FIXED Bug 7: churn rates sit at exact 0.0% for months before first event;
+                    // smoothing interpolates a false gradual rise through zero months.
+                    showSymbol: true,
+                    symbolSize: 4,
                     lineStyle: { color: '#F59E0B', width: 2 },
                     areaStyle: { color: 'rgba(245,158,11,0.07)' },
                     data: logoRet,
@@ -126,8 +129,9 @@ export const ChurnAnalyticsView: React.FC = () => {
                 {
                     name: 'Revenue Churn %',
                     type: 'line',
-                    smooth: true,
-                    showSymbol: false,
+                    smooth: false, // same reason as Logo Churn %
+                    showSymbol: true,
+                    symbolSize: 4,
                     lineStyle: { color: '#F43F5E', width: 2 },
                     areaStyle: { color: 'rgba(244,63,94,0.07)' },
                     data: revenueRet,
@@ -193,9 +197,9 @@ export const ChurnAnalyticsView: React.FC = () => {
                     },
                     {
                         label: 'New / Churn Coverage',
-                        value: newVsChurn === '—' ? '—' : `${newVsChurn}×`,
+                        value: newVsChurn === 'N/A' ? 'N/A' : `${newVsChurn}×`,
                         tip: 'How many dollars of new MRR are being added for every dollar churned. >1× means you are growing despite churn.',
-                        danger: newVsChurn !== '—' && parseFloat(newVsChurn) < 1,
+                        danger: newVsChurn !== 'N/A' && parseFloat(newVsChurn) < 1,
                     },
                 ].map(({ label, value, tip, danger }) => (
                     <div

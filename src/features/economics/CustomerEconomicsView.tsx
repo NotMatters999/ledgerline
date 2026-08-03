@@ -66,8 +66,9 @@ export const CustomerEconomicsView: React.FC = () => {
                 {
                     name: 'ARPA',
                     type: 'line',
-                    smooth: true,
-                    showSymbol: false,
+                    smooth: false, // ARPA = MRR/customers — can jump sharply; smoothing implies false gradual drift.
+                    showSymbol: true,
+                    symbolSize: 4,
                     lineStyle: { color: '#A78BFA', width: 3 },
                     itemStyle: { color: '#A78BFA' },
                     areaStyle: {

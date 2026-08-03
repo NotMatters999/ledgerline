@@ -49,8 +49,11 @@ export const RetentionChart: React.FC<RetentionChartProps> = ({ data }) => {
                 {
                     name: 'NRR',
                     type: 'line',
-                    smooth: true,
-                    lineStyle: { width: 3, color: '#A78BFA' }, // Purple 400
+                    smooth: false, // NRR is a rate; can be 100% flat for many months before any churn/expansion occurs.
+                    // Smoothing would falsely imply gradual drift through flat periods.
+                    showSymbol: true,
+                    symbolSize: 4,
+                    lineStyle: { width: 3, color: '#A78BFA' },
                     itemStyle: { color: '#A78BFA' },
                     areaStyle: {
                         color: {
@@ -67,8 +70,10 @@ export const RetentionChart: React.FC<RetentionChartProps> = ({ data }) => {
                 {
                     name: 'GRR',
                     type: 'line',
-                    smooth: true,
-                    lineStyle: { width: 3, color: '#FCD34D' }, // Amber 300
+                    smooth: false, // same reason as NRR
+                    showSymbol: true,
+                    symbolSize: 4,
+                    lineStyle: { width: 3, color: '#FCD34D' },
                     itemStyle: { color: '#FCD34D' },
                     data: grr
                 }

@@ -176,6 +176,15 @@ body {
   font-size: 2rem;
   font-weight: 700;
   color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.metric-card-content {
+  overflow: hidden;
+  min-width: 0;
 }
 
 /* --- Navigation --- */

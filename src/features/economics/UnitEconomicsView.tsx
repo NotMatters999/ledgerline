@@ -116,7 +116,7 @@ export const UnitEconomicsView: React.FC = () => {
     const formatCurrency = (val: number) => 
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
 
-    const ltvDisplay = currentLtv === null ? 'Infinite' : formatCurrency(currentLtv);
+    const ltvDisplay = currentLtv === null ? 'N/A' : formatCurrency(currentLtv);
     const cacDisplay = currentCac === null ? 'N/A' : formatCurrency(currentCac);
     const paybackDisplay = currentPayback === null ? 'N/A' : `${currentPayback.toFixed(1)} mo`;
     const ratioDisplay = currentRatio === null ? 'N/A' : `${currentRatio.toFixed(1)}x`;
