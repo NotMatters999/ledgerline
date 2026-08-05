@@ -14,6 +14,8 @@ export interface PreviewResult {
     date_format: string | null;
     // 5-tuple: (customer_id, date_iso, amount, currency, category) — matches Rust tuple serialization
     sample_normalized: [string, string, number, string, string][];
+    // total non-blank parseable rows in the full file — used for the confirm button label
+    total_rows: number;
 }
 
 export interface ValidationError {

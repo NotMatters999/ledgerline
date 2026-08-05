@@ -298,7 +298,7 @@ const ModalBody: React.FC<{
                     </svg>
                     <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0 }}>
                         Previewing <strong style={{ color: 'var(--text-primary)' }}>{rows.length}</strong> sample rows.
-                        The full file will be imported on confirm.
+                        Full file contains <strong style={{ color: 'var(--text-primary)' }}>{result.total_rows.toLocaleString()}</strong> rows — all will be imported on confirm.
                     </p>
                 </div>
 
@@ -351,7 +351,7 @@ const ModalBody: React.FC<{
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
-                        Import {rows.length} rows
+                        Import {result.total_rows.toLocaleString()} rows
                     </button>
                 </div>
             </div>

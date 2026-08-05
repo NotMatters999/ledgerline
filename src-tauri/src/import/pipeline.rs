@@ -42,6 +42,7 @@ pub struct PreviewResult {
     pub mapped_columns: MappedColumns,
     pub date_format: Option<String>,
     pub sample_normalized: Vec<(String, String, f64, String, String)>, // (customer_id, date, amount, currency, category)
+    pub total_rows: usize, // total parseable rows in the file (not capped to preview sample)
 }
 
 pub fn preview(path: &Path) -> Result<PreviewResult, ImportError> {
@@ -89,6 +90,13 @@ pub fn preview(path: &Path) -> Result<PreviewResult, ImportError> {
         mapped_columns: mapped,
         date_format: Some(format!("{:?}", format)),
         sample_normalized,
+        total_rows: parsed.rows.iter().filter(|r| {
+            // count non-blank rows only, consistent with how commit() counts them
+            let c = r.get(customer_idx).map(|s| s.trim()).unwrap_or("");
+            let d = r.get(date_idx).map(|s| s.trim()).unwrap_or("");
+            let a = r.get(amount_idx).map(|s| s.trim()).unwrap_or("");
+            !(c.is_empty() && d.is_empty() && a.is_empty())
+        }).count(),
     })
 }
 
