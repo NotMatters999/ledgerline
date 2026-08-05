@@ -20,7 +20,20 @@ impl MappedColumns {
 
 pub fn detect_columns(headers: &[String]) -> MappedColumns {
     let customer_aliases = ["customer_id", "customer", "account", "account_id", "company"];
-    let revenue_aliases = ["mrr", "revenue", "amount", "subscription"];
+    let revenue_aliases = [
+        "mrr",              // "MRR"
+        "mrr_amount",       // "MRR Amount", "MRR-Amount"
+        "mrr_value",        // "MRR Value"
+        "revenue",          // "Revenue"
+        "amount",           // "Amount"
+        "monthly_revenue",  // "Monthly Revenue"
+        "revenue_amount",   // "Revenue Amount"
+        "net_revenue",      // "Net Revenue"
+        "arr",              // "ARR" (annual; will be treated as MRR for monthly rows)
+        "subscription",     // "Subscription"
+        "subscription_revenue", // "Subscription Revenue"
+        "recurring_revenue",    // "Recurring Revenue"
+    ];
     let date_aliases = ["date", "month", "period", "invoice_date"];
     let currency_aliases = ["currency", "curr", "iso", "currency_code"];
     let category_aliases = ["category", "plan", "tier", "product", "subscription_type"];
