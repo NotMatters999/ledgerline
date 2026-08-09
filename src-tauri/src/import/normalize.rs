@@ -81,23 +81,23 @@ fn detect_single_format(s: &str) -> Option<DateFormat> {
     // YYYY-MM: 4-digit year, dash, 1-2 digit month, nothing after
     {
         let parts: Vec<&str> = s.splitn(2, '-').collect();
-        if parts.len() == 2 && parts[0].len() == 4 && !parts[1].contains('-') {
-            if parse_year_month(parts[0], parts[1]).is_some() {
-                return Some(DateFormat::YyyyMm);
-            }
+        if parts.len() == 2 && parts[0].len() == 4 && !parts[1].contains('-')
+            && parse_year_month(parts[0], parts[1]).is_some()
+        {
+            return Some(DateFormat::YyyyMm);
         }
     }
 
     // MMM-YYYY: 3-char month abbreviation, dash, 4-digit year
     {
         let parts: Vec<&str> = s.splitn(2, '-').collect();
-        if parts.len() == 2 && parts[0].len() == 3 && parts[1].len() == 4 {
-            if NaiveDate::parse_from_str(
+        if parts.len() == 2 && parts[0].len() == 3 && parts[1].len() == 4
+            && NaiveDate::parse_from_str(
                 &format!("{} 01 {}", parts[0], parts[1]),
                 "%b %d %Y",
-            ).is_ok() {
-                return Some(DateFormat::MmmDashYyyy);
-            }
+            ).is_ok()
+        {
+            return Some(DateFormat::MmmDashYyyy);
         }
     }
 
@@ -106,16 +106,12 @@ fn detect_single_format(s: &str) -> Option<DateFormat> {
         let parts: Vec<&str> = s.split('/').collect();
         if parts.len() == 2 {
             // MM/YYYY — second part is exactly 4 digits
-            if parts[1].len() == 4 {
-                if parse_year_month(parts[1], parts[0]).is_some() {
-                    return Some(DateFormat::MmYyyySlash);
-                }
+            if parts[1].len() == 4 && parse_year_month(parts[1], parts[0]).is_some() {
+                return Some(DateFormat::MmYyyySlash);
             }
             // YYYY/MM — first part is exactly 4 digits
-            if parts[0].len() == 4 {
-                if parse_year_month(parts[0], parts[1]).is_some() {
-                    return Some(DateFormat::YyyyMmSlash);
-                }
+            if parts[0].len() == 4 && parse_year_month(parts[0], parts[1]).is_some() {
+                return Some(DateFormat::YyyyMmSlash);
             }
         }
     }
