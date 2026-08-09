@@ -55,8 +55,15 @@ pub fn preview(path: &Path) -> Result<PreviewResult, ImportError> {
     };
 
     let sample_rows: Vec<&Vec<String>> = parsed.rows.iter().take(50).collect();
-    
-    let date_samples: Vec<String> = sample_rows.iter().map(|r| r.get(date_idx).cloned().unwrap_or_default()).collect();
+
+    // Collect up to 50 non-blank date values from the entire file so that
+    // sparse or late-starting files still yield enough samples for detection.
+    let date_samples: Vec<String> = parsed.rows.iter()
+        .filter_map(|r| r.get(date_idx))
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .take(50)
+        .collect();
     let format = detect_date_format(&date_samples)?;
 
     let currency_idx = mapped.currency_idx;
@@ -109,7 +116,13 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<usize, ImportError> 
         _ => return Err(ImportError::MissingColumns(mapped.clone())),
     };
 
-    let date_samples: Vec<String> = parsed.rows.iter().take(50).map(|r| r.get(date_idx).cloned().unwrap_or_default()).collect();
+    // Skip blank cells; scan the whole file so sparse headers don't mislead detection.
+    let date_samples: Vec<String> = parsed.rows.iter()
+        .filter_map(|r| r.get(date_idx))
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .take(50)
+        .collect();
     let format = detect_date_format(&date_samples)?;
 
     let currency_idx = mapped.currency_idx;
