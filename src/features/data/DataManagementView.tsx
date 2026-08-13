@@ -83,8 +83,18 @@ export const DataManagementView: React.FC = () => {
     }, [loadRows, page, search, sortBy, sortDir]);
 
     useEffect(() => {
+        // Don't fire any IPC while no workspace is active — the invokeWorkspace
+        // helper throws immediately when activeId is empty, which produces a
+        // spurious "unexpected error" banner on every cold open before the
+        // workspace store has finished initialising.
+        if (!hasWorkspace) {
+            setRows([]);
+            setTotal(0);
+            setError(null);
+            return;
+        }
         loadRows(page, search, sortBy, sortDir);
-    }, [page, search, sortBy, sortDir, loadRows]);
+    }, [page, search, sortBy, sortDir, loadRows, hasWorkspace]);
 
     const handleSort = (col: string) => {
         if (sortBy === col) {
@@ -246,9 +256,12 @@ export const DataManagementView: React.FC = () => {
 
             {/* Undo toast removed for strict 2-step delete */}
 
-            {/* Error */}
-            {error && mapBackendError(error) && (
-                <ErrorBanner error={mapBackendError(error)} onClear={() => setError(null)} />
+            {/* Error — show whenever error is set, always with a human-readable message */}
+            {error && (
+                <ErrorBanner
+                    error={mapBackendError(error) ?? error}
+                    onClear={() => setError(null)}
+                />
             )}
 
             {/* Table */}

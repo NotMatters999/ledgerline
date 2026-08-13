@@ -6,9 +6,11 @@ interface ErrorBannerProps {
     durationMs?: number;
 }
 
-export const ErrorBanner: React.FC<ErrorBannerProps> = ({ error, onClear, durationMs = 5000 }) => {
+export const ErrorBanner: React.FC<ErrorBannerProps> = ({ error, onClear, durationMs = 0 }) => {
     useEffect(() => {
-        if (!error) return;
+        // durationMs = 0 means no auto-dismiss (user must click ×).
+        // Pass a positive value for toast-style transient messages.
+        if (!error || durationMs <= 0) return;
 
         const timer = setTimeout(() => {
             onClear();

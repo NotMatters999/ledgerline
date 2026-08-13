@@ -152,8 +152,11 @@ export const SettingsView: React.FC = () => {
             {/* ── Backups Tab ──────────────────────────────────────────────────── */}
             {activeTab === 'backups' && (
                 <>
-                    {actionError && mapBackendError(actionError) && (
-                        <ErrorBanner error={mapBackendError(actionError)} onClear={() => setActionError(null)} />
+                    {actionError && (
+                        <ErrorBanner
+                            error={mapBackendError(actionError) ?? actionError}
+                            onClear={() => setActionError(null)}
+                        />
                     )}
                     {actionSuccess && (
                         <div style={{ background: 'rgba(16,185,129,0.1)', color: 'var(--status-success)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(16,185,129,0.2)' }}>
@@ -244,8 +247,11 @@ export const SettingsView: React.FC = () => {
                         </div>
                     ))}
 
-                    {prefError && mapBackendError(prefError) && (
-                        <ErrorBanner error={mapBackendError(prefError)} onClear={() => setPrefError(null)} />
+                    {prefError && (
+                        <ErrorBanner
+                            error={mapBackendError(prefError) ?? prefError}
+                            onClear={() => setPrefError(null)}
+                        />
                     )}
                     {prefSaved && <p style={{ color: 'var(--status-success)', fontSize: '0.875rem' }}>✓ Preferences saved</p>}
 
