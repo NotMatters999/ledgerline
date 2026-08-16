@@ -47,16 +47,12 @@ export const DataManagementView: React.FC = () => {
 
     const fetchData = useFinancialsStore(s => s.fetchData);
     const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
+    const workspaceLoading  = useWorkspaceStore(s => s.isLoading);
     const hasWorkspace = Boolean(activeWorkspaceId);
+    // True while workspace.load() is still in-flight (activeId not yet known)
+    const workspaceReady = !workspaceLoading && hasWorkspace !== undefined;
 
     const loadRows = useCallback(async (p: number, q: string, sb: string, sd: string) => {
-        if (!hasWorkspace) {
-            setRows([]);
-            setTotal(0);
-            setIsLoading(false);
-            return;
-        }
-
         setIsLoading(true);
         setError(null);
         try {
@@ -67,8 +63,6 @@ export const DataManagementView: React.FC = () => {
             setRows(data);
             setTotal(count);
         } catch (e: unknown) {
-            // Tauri IPC errors are plain strings, not JS Error objects.
-            // Log the raw error to devtools so the real cause is visible.
             console.error('[DataManagementView] loadRows error (raw):', e);
             const msg = typeof e === 'string' ? e
                 : (e instanceof Error ? e.message : JSON.stringify(e));
@@ -76,17 +70,17 @@ export const DataManagementView: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [activeWorkspaceId, hasWorkspace]);
+    }, [activeWorkspaceId]); // re-create only when workspace actually changes
+
 
     const refreshRows = useCallback(async (nextPage = page) => {
         await loadRows(nextPage, search, sortBy, sortDir);
     }, [loadRows, page, search, sortBy, sortDir]);
 
     useEffect(() => {
-        // Don't fire any IPC while no workspace is active — the invokeWorkspace
-        // helper throws immediately when activeId is empty, which produces a
-        // spurious "unexpected error" banner on every cold open before the
-        // workspace store has finished initialising.
+        // Gate on both: workspace must be known (not loading) AND have an ID.
+        // During the brief window while workspace.load() is in-flight,
+        // activeId is '' and workspaceLoading is true — don't fire any IPC.
         if (!hasWorkspace) {
             setRows([]);
             setTotal(0);
@@ -94,7 +88,8 @@ export const DataManagementView: React.FC = () => {
             return;
         }
         loadRows(page, search, sortBy, sortDir);
-    }, [page, search, sortBy, sortDir, loadRows, hasWorkspace]);
+    }, [page, search, sortBy, sortDir, loadRows, hasWorkspace, workspaceReady]);
+
 
     const handleSort = (col: string) => {
         if (sortBy === col) {
