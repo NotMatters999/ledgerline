@@ -33,15 +33,15 @@ export const useFinancialsStore = create<FinancialsState>((set) => ({
     fetchData: async () => {
         set({ isLoading: true, error: null });
         try {
-            // Parallel fetch to respect Section 10 IPC single-responsibility rule
-            const [mrr, arr, retention, ltv, cac, payback] = await Promise.all([
-                getMrr(),
-                getArr(),
-                getRetention(),
-                getLtv(),
-                getCac(),
-                getPayback(),
-            ]);
+            // Sequential — not Promise.all — because each command opens its own
+            // DuckDB connection. Concurrent opens on the same .duckdb file fail
+            // with an exclusive-lock error on DuckDB community edition.
+            const mrr       = await getMrr();
+            const arr       = await getArr();
+            const retention = await getRetention();
+            const ltv       = await getLtv();
+            const cac       = await getCac();
+            const payback   = await getPayback();
             
             set({
                 mrr,

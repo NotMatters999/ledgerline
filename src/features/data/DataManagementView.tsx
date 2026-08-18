@@ -56,10 +56,11 @@ export const DataManagementView: React.FC = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const [data, count] = await Promise.all([
-                listMrrLog(q, sb, sd, p * PAGE_SIZE, PAGE_SIZE),
-                countMrrLog(q),
-            ]);
+            // Sequential — not Promise.all — because each command opens its own
+            // DuckDB connection. DuckDB holds an exclusive file lock per Connection,
+            // so two concurrent opens on the same .duckdb file fail with a lock error.
+            const data  = await listMrrLog(q, sb, sd, p * PAGE_SIZE, PAGE_SIZE);
+            const count = await countMrrLog(q);
             setRows(data);
             setTotal(count);
         } catch (e: unknown) {
@@ -71,6 +72,7 @@ export const DataManagementView: React.FC = () => {
             setIsLoading(false);
         }
     }, [activeWorkspaceId]); // re-create only when workspace actually changes
+
 
 
     const refreshRows = useCallback(async (nextPage = page) => {
