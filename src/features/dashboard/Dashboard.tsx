@@ -4,11 +4,17 @@ import { MetricCard } from './MetricCard';
 import { MrrChart } from './MrrChart';
 import { RetentionChart } from '../../charts/RetentionChart';
 import { ErrorBanner } from '../../components/ErrorBanner';
+import { CurrencyWarningBanner } from '../../components/CurrencyWarningBanner';
 import { mapBackendError } from '../../utils/errors';
 
 import { useWorkspaceStore } from '../../store/workspace';
 
-export const Dashboard: React.FC = () => {
+interface DashboardProps {
+    /** Called when the user clicks "Configure Rates →" in the currency warning banner. */
+    onGoToSettings?: () => void;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ onGoToSettings }) => {
     const { mrr, arr, retention, isLoading, error, fetchData } = useFinancialsStore();
 
     const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
@@ -57,11 +63,14 @@ export const Dashboard: React.FC = () => {
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
 
     return (
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <header className="mb-8">
                 <h1 className="page-title">Executive Dashboard</h1>
                 <p className="page-subtitle">Real-time SaaS metrics and retention analytics.</p>
             </header>
+
+            {/* Currency warning — shown when mrr_log contains currencies without configured rates */}
+            <CurrencyWarningBanner onGoToSettings={onGoToSettings} />
 
             {mrr.length === 0 ? (
                 <div className="flex-center" style={{ height: '300px', flexDirection: 'column', gap: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '1rem', border: '1px dashed rgba(255,255,255,0.1)' }}>

@@ -45,6 +45,14 @@ pub struct PreviewResult {
     pub total_rows: usize, // total parseable rows in the file (not capped to preview sample)
 }
 
+/// Returned by `commit()` — tells the caller how many rows were freshly
+/// inserted versus how many already existed and were overwritten (upserted).
+#[derive(Serialize, Clone, Debug)]
+pub struct ImportResult {
+    pub inserted: usize,
+    pub updated: usize,
+}
+
 pub fn preview(path: &Path) -> Result<PreviewResult, ImportError> {
     let parsed = parse_file(path)?;
     let mapped = detect_columns(&parsed.headers);
@@ -107,7 +115,7 @@ pub fn preview(path: &Path) -> Result<PreviewResult, ImportError> {
     })
 }
 
-pub fn commit(conn: &mut Connection, path: &Path) -> Result<usize, ImportError> {
+pub fn commit(conn: &mut Connection, path: &Path) -> Result<ImportResult, ImportError> {
     let parsed = parse_file(path)?;
     let mapped = detect_columns(&parsed.headers);
 
@@ -207,6 +215,31 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<usize, ImportError> 
     drop(rows);
     drop(stmt);
 
+    // ── Count how many incoming (customer_id, period) pairs already exist ──
+    // We do this inside the transaction so the read is consistent.
+    // Build the list of (customer_id, period) tuples as a VALUES clause.
+    let updated_count: usize = if final_rows.is_empty() {
+        0
+    } else {
+        // Use a temporary table approach for correctness with large datasets.
+        tx.execute_batch("CREATE TEMPORARY TABLE IF NOT EXISTS _import_staging (customer_id VARCHAR, period VARCHAR)")?;
+        tx.execute_batch("DELETE FROM _import_staging")?;
+        {
+            let mut ins = tx.prepare("INSERT INTO _import_staging VALUES (?, ?)")?;
+            for row in &final_rows {
+                ins.execute(duckdb::params![row.0, row.1])?;
+            }
+        }
+        let count: i64 = tx.query_row(
+            "SELECT COUNT(*) FROM mrr_log m
+             INNER JOIN _import_staging s ON s.customer_id = m.customer_id AND m.period::VARCHAR = s.period",
+            [],
+            |r| r.get(0),
+        )?;
+        tx.execute_batch("DROP TABLE IF EXISTS _import_staging")?;
+        count as usize
+    };
+
     let import_id = Uuid::new_v4().to_string();
 
     {
@@ -222,5 +255,10 @@ pub fn commit(conn: &mut Connection, path: &Path) -> Result<usize, ImportError> 
     }
 
     tx.commit()?;
-    Ok(final_rows.len())
+
+    let total = final_rows.len();
+    let updated = updated_count.min(total);
+    let inserted = total - updated;
+
+    Ok(ImportResult { inserted, updated })
 }

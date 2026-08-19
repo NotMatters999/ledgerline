@@ -1,7 +1,7 @@
 use tauri::State;
 use std::path::PathBuf;
 use crate::commands::workspace::AppState;
-use crate::import::pipeline::{preview, commit, PreviewResult, ImportError};
+use crate::import::pipeline::{preview, commit, PreviewResult, ImportResult, ImportError};
 use crate::db::connection::open_connection;
 use crate::utils::error::LedgerlineError;
 use crate::utils::logger::log_info;
@@ -15,7 +15,7 @@ pub fn import_preview(_workspace_id: String, file_path: String, _state: State<'_
 }
 
 #[tauri::command]
-pub fn import_commit(workspace_id: String, file_path: String, state: State<'_, AppState>) -> Result<usize, LedgerlineError> {
+pub fn import_commit(workspace_id: String, file_path: String, state: State<'_, AppState>) -> Result<ImportResult, LedgerlineError> {
     log_info("Import", &format!("Starting import commit for file: {}", file_path));
     let (ws_id, db_path) = {
         let mgr = state.workspace_manager.lock().unwrap();
@@ -32,11 +32,11 @@ pub fn import_commit(workspace_id: String, file_path: String, state: State<'_, A
     }
 
     let mut conn = open_connection(&db_path, Some(&ws_id)).map_err(LedgerlineError::from)?;
-    let count = commit(&mut conn, PathBuf::from(file_path).as_path()).map_err(LedgerlineError::from)?;
+    let result = commit(&mut conn, PathBuf::from(file_path).as_path()).map_err(LedgerlineError::from)?;
     
-    log_info("Import", &format!("Import commit completed successfully, {} rows", count));
+    log_info("Import", &format!("Import commit completed: {} inserted, {} updated", result.inserted, result.updated));
     
-    Ok(count)
+    Ok(result)
 }
 
 #[cfg(test)]

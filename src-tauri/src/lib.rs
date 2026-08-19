@@ -9,7 +9,8 @@ pub mod utils;
 use commands::workspace::*;
 use commands::import::*;
 use commands::engines::{mrr_get, arr_get, retention_get, ltv_get, cac_get, payback_get, forecast_get, cohort_get};
-use commands::settings::{setting_set, setting_get, setting_get_f64, marketing_spend_add};
+use commands::settings::{setting_set, setting_get, setting_get_f64, marketing_spend_add,
+    exchange_rates_get, exchange_rates_set, currencies_missing_rates_get};
 use commands::export::{csv_export, pdf_export};
 use commands::backup::{backup_list, backup_create, backup_restore_request, backup_restore_confirm};
 use commands::data::{mrr_log_list, mrr_log_count, mrr_log_add, mrr_log_delete_request, mrr_log_delete_confirm};
@@ -82,6 +83,9 @@ pub fn run() {
             setting_get,
             setting_get_f64,
             marketing_spend_add,
+            exchange_rates_get,
+            exchange_rates_set,
+            currencies_missing_rates_get,
             csv_export,
             pdf_export,
             backup_list,

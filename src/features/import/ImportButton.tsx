@@ -10,7 +10,7 @@ type Phase =
     | { tag: 'loading'; message: string }
     | { tag: 'preview'; result: PreviewResult; filePath: string }
     | { tag: 'committing' }
-    | { tag: 'success'; rowCount: number }
+    | { tag: 'success'; inserted: number; updated: number }
     | { tag: 'error'; message: string };
 
 interface ImportButtonProps {
@@ -48,8 +48,8 @@ export const ImportButton: React.FC<ImportButtonProps> = ({ onSuccess }) => {
         const { filePath } = phase;
         setPhase({ tag: 'committing' });
         try {
-            const rowCount = await importCommit(filePath);
-            setPhase({ tag: 'success', rowCount });
+            const result = await importCommit(filePath);
+            setPhase({ tag: 'success', inserted: result.inserted, updated: result.updated });
             // Refresh all data stores
             await Promise.all([
                 fetchFinancials(),
@@ -243,8 +243,17 @@ const ModalBody: React.FC<{
                         Import successful
                     </p>
                     <p className="text-muted" style={{ fontSize: '0.875rem' }}>
-                        {phase.rowCount} rows imported. All charts have been refreshed.
+                        <strong style={{ color: 'var(--accent-primary)' }}>{phase.inserted.toLocaleString()}</strong> new rows added
+                        {phase.updated > 0 && (
+                            <>, <strong style={{ color: 'rgba(245,158,11,0.9)' }}>{phase.updated.toLocaleString()}</strong> existing records updated</>
+                        )}
+                        . All charts have been refreshed.
                     </p>
+                    {phase.updated > 0 && (
+                        <p style={{ fontSize: '0.75rem', color: 'rgba(245,158,11,0.75)', marginTop: '0.5rem' }}>
+                            ⚠ Updated rows replaced existing data for the same customer + period.
+                        </p>
+                    )}
                 </div>
                 <button id="import-success-close" onClick={onClose} style={primaryBtnStyle('var(--accent-primary)', '#000')}>
                     Done

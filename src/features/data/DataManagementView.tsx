@@ -14,6 +14,7 @@ import { ImportButton } from '../import/ImportButton';
 import { ExportButton } from '../export/ExportButton';
 import { InlineConfirm } from '../../components/InlineConfirm';
 import { ErrorBanner } from '../../components/ErrorBanner';
+import { CurrencyWarningBanner } from '../../components/CurrencyWarningBanner';
 import { mapBackendError } from '../../utils/errors';
 import { validateMrrAmount } from '../../utils/math';
 
@@ -173,6 +174,9 @@ export const DataManagementView: React.FC = () => {
                 <h2 className="page-title">Data Management</h2>
                 <p className="page-subtitle">Search, edit and manage your MRR records.</p>
             </header>
+
+            {/* Currency warning — shown when mrr_log contains currencies without configured rates */}
+            <CurrencyWarningBanner />
 
             {/* Toolbar */}
             <div className="flex-between" style={{ gap: '1rem', flexWrap: 'wrap' }}>

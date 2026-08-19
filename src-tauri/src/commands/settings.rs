@@ -2,6 +2,8 @@ use tauri::State;
 use crate::commands::workspace::AppState;
 use chrono::NaiveDate;
 use duckdb::Connection;
+use serde::{Deserialize, Serialize};
+use crate::engines::mrr::currencies_without_rates;
 
 fn get_workspace_conn(workspace_id: &str, state: &State<'_, AppState>) -> Result<Connection, String> {
     let mgr = state.workspace_manager.lock().unwrap();
@@ -80,6 +82,76 @@ pub fn marketing_spend_add(workspace_id: String, period: String, amount: f64, st
     ).map_err(|e| e.to_string())?;
     
     Ok(())
+}
+
+// ─── Exchange rate shape for IPC ─────────────────────────────────────────────
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ExchangeRate {
+    pub currency: String,
+    pub rate_to_base: f64,
+}
+
+/// Return all currently configured exchange rates for this workspace.
+#[tauri::command]
+pub fn exchange_rates_get(workspace_id: String, state: State<'_, AppState>) -> Result<Vec<ExchangeRate>, String> {
+    let conn = get_workspace_conn(&workspace_id, &state)?;
+    let mut stmt = conn.prepare(
+        "SELECT currency, rate_to_base FROM exchange_rates ORDER BY currency"
+    ).map_err(|e| e.to_string())?;
+    let mut rows = stmt.query([]).map_err(|e| e.to_string())?;
+    let mut result = Vec::new();
+    while let Some(row) = rows.next().map_err(|e| e.to_string())? {
+        result.push(ExchangeRate {
+            currency: row.get(0).map_err(|e| e.to_string())?,
+            rate_to_base: row.get(1).map_err(|e| e.to_string())?,
+        });
+    }
+    Ok(result)
+}
+
+/// Batch-upsert exchange rates.  Rates with value <= 0 are rejected.
+/// Passing an empty vec is a no-op (does not clear existing rates).
+#[tauri::command]
+pub fn exchange_rates_set(
+    workspace_id: String,
+    rates: Vec<ExchangeRate>,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    for r in &rates {
+        if r.rate_to_base <= 0.0 {
+            return Err(format!("Rate for {} must be positive (got {})", r.currency, r.rate_to_base));
+        }
+        if r.currency.trim().is_empty() {
+            return Err("Currency code cannot be empty".into());
+        }
+    }
+
+    let mut conn = get_workspace_conn(&workspace_id, &state)?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    {
+        let mut stmt = tx.prepare(
+            "INSERT INTO exchange_rates (currency, rate_to_base, updated_at)
+             VALUES (?, ?, CURRENT_TIMESTAMP)
+             ON CONFLICT (currency) DO UPDATE SET
+                 rate_to_base = excluded.rate_to_base,
+                 updated_at   = CURRENT_TIMESTAMP"
+        ).map_err(|e| e.to_string())?;
+        for r in &rates {
+            stmt.execute(duckdb::params![r.currency.trim(), r.rate_to_base])
+                .map_err(|e| e.to_string())?;
+        }
+    }
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Return the list of currency codes that exist in mrr_log but have no
+/// entry in exchange_rates.  Used by the frontend to show a warning banner.
+#[tauri::command]
+pub fn currencies_missing_rates_get(workspace_id: String, state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    let conn = get_workspace_conn(&workspace_id, &state)?;
+    currencies_without_rates(&conn).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

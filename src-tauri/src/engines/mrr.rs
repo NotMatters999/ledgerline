@@ -22,13 +22,18 @@ pub struct MrrMovement {
 }
 
 pub fn calculate_mrr(conn: &Connection) -> Result<Vec<MrrMovement>, duckdb::Error> {
+    // LEFT JOIN exchange_rates so that:
+    //   - currencies with a configured rate are converted to the base currency
+    //   - currencies with no row in exchange_rates default to rate 1.0 (pass-through)
+    // This is backwards-compatible: single-currency workspaces see no change.
     let mut stmt = conn.prepare(
-        "SELECT customer_id, 
-                date_trunc('month', period)::DATE as month_start, 
-                SUM(mrr_amount) as mrr 
-         FROM mrr_log 
-         GROUP BY customer_id, month_start 
-         ORDER BY month_start, customer_id"
+        "SELECT m.customer_id,
+                date_trunc('month', m.period)::DATE as month_start,
+                SUM(m.mrr_amount * COALESCE(er.rate_to_base, 1.0)) as mrr
+         FROM mrr_log m
+         LEFT JOIN exchange_rates er ON er.currency = m.currency
+         GROUP BY m.customer_id, month_start
+         ORDER BY month_start, m.customer_id"
     )?;
 
     let mut rows = stmt.query([])?;
@@ -131,3 +136,25 @@ pub fn calculate_mrr(conn: &Connection) -> Result<Vec<MrrMovement>, duckdb::Erro
 
     Ok(results)
 }
+
+/// Returns the distinct currency codes that appear in `mrr_log` but have no
+/// row in `exchange_rates`.  An empty vec means every currency is covered
+/// (or the workspace only has one currency and no conversion is needed).
+/// The frontend uses this to show a warning banner.
+pub fn currencies_without_rates(conn: &Connection) -> Result<Vec<String>, duckdb::Error> {
+    let mut stmt = conn.prepare(
+        "SELECT DISTINCT m.currency
+         FROM mrr_log m
+         LEFT JOIN exchange_rates er ON er.currency = m.currency
+         WHERE er.currency IS NULL
+         ORDER BY m.currency"
+    )?;
+    let mut rows = stmt.query([])?;
+    let mut result = Vec::new();
+    while let Some(row) = rows.next()? {
+        let c: String = row.get(0)?;
+        result.push(c);
+    }
+    Ok(result)
+}
+

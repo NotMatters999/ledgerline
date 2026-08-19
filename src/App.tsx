@@ -88,7 +88,7 @@ function App() {
 
       {/* Main Content Area */}
       <div className="content-wrapper">
-        {activeTab === 'dashboard'   && <Dashboard />}
+        {activeTab === 'dashboard'   && <Dashboard onGoToSettings={() => setActiveTab('settings')} />}
         {activeTab === 'cohorts'     && <CohortView />}
         {activeTab === 'retention'   && <RetentionView />}
         {activeTab === 'waterfall'   && <WaterfallView />}

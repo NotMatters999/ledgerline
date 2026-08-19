@@ -23,10 +23,16 @@ export interface ValidationError {
     reason: string;
 }
 
+/** Returned by importCommit — breakdown of newly inserted vs. overwritten rows. */
+export interface ImportResult {
+    inserted: number;
+    updated: number;
+}
+
 export async function importPreview(filePath: string): Promise<PreviewResult> {
     return await invokeWorkspace<PreviewResult>('import_preview', { filePath });
 }
 
-export async function importCommit(filePath: string): Promise<number> {
-    return await invokeWorkspace<number>('import_commit', { filePath });
+export async function importCommit(filePath: string): Promise<ImportResult> {
+    return await invokeWorkspace<ImportResult>('import_commit', { filePath });
 }
