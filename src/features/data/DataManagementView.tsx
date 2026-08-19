@@ -188,7 +188,7 @@ export const DataManagementView: React.FC = () => {
                     }}
                 />
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                    <ImportButton />
+                    <ImportButton onSuccess={() => { setPage(0); refreshRows(0); }} />
                     <ExportButton />
                     <button
                         className="nav-item active"

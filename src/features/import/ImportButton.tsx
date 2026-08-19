@@ -13,7 +13,12 @@ type Phase =
     | { tag: 'success'; rowCount: number }
     | { tag: 'error'; message: string };
 
-export const ImportButton: React.FC = () => {
+interface ImportButtonProps {
+    /** Called after a successful import commit so the parent can refresh its data table. */
+    onSuccess?: () => void;
+}
+
+export const ImportButton: React.FC<ImportButtonProps> = ({ onSuccess }) => {
     const [phase, setPhase] = useState<Phase>({ tag: 'idle' });
     const fetchFinancials = useFinancialsStore(s => s.fetchData);
     const fetchCohort = useCohortStore(s => s.fetchData);
@@ -50,6 +55,8 @@ export const ImportButton: React.FC = () => {
                 fetchFinancials(),
                 fetchCohort(),
             ]);
+            // Notify parent (e.g. DataManagementView) so it can reload its rows
+            onSuccess?.();
         } catch (err: any) {
             setPhase({ tag: 'error', message: err instanceof Error ? err.message : (typeof err === 'string' ? err : (JSON.stringify(err) || String(err))) });
         }
