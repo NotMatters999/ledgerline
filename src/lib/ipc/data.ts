@@ -26,8 +26,8 @@ export async function listMrrLog(
 ): Promise<MrrLogRow[]> {
     return await invokeWorkspace<MrrLogRow[]>('mrr_log_list', {
         search,
-        sort_by: sortBy,
-        sort_dir: sortDir,
+        sortBy,
+        sortDir,
         offset,
         limit,
     });

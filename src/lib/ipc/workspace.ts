@@ -17,7 +17,7 @@ export async function createWorkspace(name: string): Promise<Workspace> {
 }
 
 export async function renameWorkspace(id: string, newName: string): Promise<Workspace> {
-    return await invoke<Workspace>('workspace_rename', { id, new_name: newName });
+    return await invoke<Workspace>('workspace_rename', { id, newName });
 }
 
 export async function switchWorkspace(id: string): Promise<Workspace> {
