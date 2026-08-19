@@ -96,7 +96,9 @@ function App() {
         {activeTab === 'customers'   && <CustomerEconomicsView />}
         {activeTab === 'churn'       && <ChurnAnalyticsView />}
         {activeTab === 'forecasting' && <ForecastingView />}
-        {activeTab === 'data'        && <DataManagementView />}
+        <div style={{ display: activeTab === 'data' ? 'block' : 'none' }}>
+            <DataManagementView />
+          </div>
         {activeTab === 'docs'        && <DocumentationView />}
         {activeTab === 'settings'    && <SettingsView />}
       </div>

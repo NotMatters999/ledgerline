@@ -50,7 +50,7 @@ export const DataManagementView: React.FC = () => {
     const workspaceLoading  = useWorkspaceStore(s => s.isLoading);
     const hasWorkspace = Boolean(activeWorkspaceId);
     // True while workspace.load() is still in-flight (activeId not yet known)
-    const workspaceReady = !workspaceLoading && hasWorkspace !== undefined;
+    const workspaceReady = !workspaceLoading && hasWorkspace;
 
     const loadRows = useCallback(async (p: number, q: string, sb: string, sd: string) => {
         setIsLoading(true);
