@@ -77,7 +77,7 @@ pub fn marketing_spend_add(workspace_id: String, period: String, amount: f64, st
          VALUES (?, ?)
          ON CONFLICT(month) DO UPDATE SET 
             marketing_spend = COALESCE(monthly_assumptions.marketing_spend, 0.0) + excluded.marketing_spend,
-            updated_at = CURRENT_TIMESTAMP", 
+            updated_at = now()", 
         duckdb::params![month_key, amount]
     ).map_err(|e| e.to_string())?;
     
