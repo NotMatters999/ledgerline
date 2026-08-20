@@ -2,16 +2,18 @@ use tauri::State;
 use crate::commands::workspace::AppState;
 use chrono::NaiveDate;
 use duckdb::Connection;
+use serde::{Deserialize, Serialize};
+use crate::engines::mrr::currencies_without_rates;
 
 fn get_workspace_conn(workspace_id: &str, state: &State<'_, AppState>) -> Result<Connection, String> {
     let mgr = state.workspace_manager.lock().unwrap();
     let workspaces = mgr.list_workspaces().map_err(|e| e.to_string())?;
     let ws = workspaces.iter().find(|w| w.id == workspace_id).ok_or("Workspace not found")?;
-    crate::db::connection::open_connection(&ws.db_path).map_err(|e| e.to_string())
+    crate::db::connection::open_connection(&ws.db_path, Some(workspace_id)).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn setting_set(_workspace_id: String, key: String, value: String, state: State<'_, AppState>) -> Result<(), String> {
+pub fn setting_set(workspace_id: String, key: String, value: String, state: State<'_, AppState>) -> Result<(), String> {
     // Validation
     if key == "gross_margin" {
         if let Ok(v) = value.parse::<f64>() {
@@ -23,7 +25,7 @@ pub fn setting_set(_workspace_id: String, key: String, value: String, state: Sta
         }
     }
 
-    let mut conn = get_workspace_conn(&_workspace_id, &state)?;
+    let mut conn = get_workspace_conn(&workspace_id, &state)?;
     
     // Atomic upsert: use a transaction so there is no gap between DELETE and INSERT
     let tx = conn.transaction().map_err(|e| e.to_string())?;
@@ -35,8 +37,8 @@ pub fn setting_set(_workspace_id: String, key: String, value: String, state: Sta
 }
 
 #[tauri::command]
-pub fn setting_get(_workspace_id: String, key: String, state: State<'_, AppState>) -> Result<String, String> {
-    let conn = get_workspace_conn(&_workspace_id, &state)?;
+pub fn setting_get(workspace_id: String, key: String, state: State<'_, AppState>) -> Result<String, String> {
+    let conn = get_workspace_conn(&workspace_id, &state)?;
     
     let mut stmt = conn.prepare("SELECT value FROM settings WHERE key = ? LIMIT 1").map_err(|e| e.to_string())?;
     let mut rows = stmt.query([&key]).map_err(|e| e.to_string())?;
@@ -56,7 +58,7 @@ pub fn setting_get_f64(workspace_id: String, key: String, state: State<'_, AppSt
 }
 
 #[tauri::command]
-pub fn marketing_spend_add(_workspace_id: String, period: String, amount: f64, _channel: String, state: State<'_, AppState>) -> Result<(), String> {
+pub fn marketing_spend_add(workspace_id: String, period: String, amount: f64, state: State<'_, AppState>) -> Result<(), String> {
     // Validation
     if amount < 0.0 {
         return Err("Marketing spend amount cannot be negative".into());
@@ -66,7 +68,7 @@ pub fn marketing_spend_add(_workspace_id: String, period: String, amount: f64, _
         return Err("Period must be a valid date in YYYY-MM-DD format".into());
     }
 
-    let conn = get_workspace_conn(&_workspace_id, &state)?;
+    let conn = get_workspace_conn(&workspace_id, &state)?;
     
     let month_key = period.chars().take(7).collect::<String>(); // YYYY-MM
 
@@ -74,12 +76,99 @@ pub fn marketing_spend_add(_workspace_id: String, period: String, amount: f64, _
         "INSERT INTO monthly_assumptions (month, marketing_spend) 
          VALUES (?, ?)
          ON CONFLICT(month) DO UPDATE SET 
-            marketing_spend = monthly_assumptions.marketing_spend + excluded.marketing_spend,
-            updated_at = CURRENT_TIMESTAMP", 
+            marketing_spend = COALESCE(monthly_assumptions.marketing_spend, 0.0) + excluded.marketing_spend,
+            updated_at = now()", 
         duckdb::params![month_key, amount]
     ).map_err(|e| e.to_string())?;
     
     Ok(())
+}
+
+// ─── Exchange rate shape for IPC ─────────────────────────────────────────────
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ExchangeRate {
+    pub currency: String,
+    pub rate_to_base: f64,
+}
+
+/// USD is the hardcoded base currency (rate = 1.0).  It is never stored in
+/// `exchange_rates` — the engine already defaults to 1.0 via COALESCE when no
+/// row is present.  We strip it from both reads and writes so the UI can never
+/// override it.
+const BASE_CURRENCY: &str = "USD";
+
+/// Return all currently configured exchange rates for this workspace.
+/// USD is excluded — it is always 1.0 and is not user-configurable.
+#[tauri::command]
+pub fn exchange_rates_get(workspace_id: String, state: State<'_, AppState>) -> Result<Vec<ExchangeRate>, String> {
+    let conn = get_workspace_conn(&workspace_id, &state)?;
+    let mut stmt = conn.prepare(
+        "SELECT currency, rate_to_base FROM exchange_rates ORDER BY currency"
+    ).map_err(|e| e.to_string())?;
+    let mut rows = stmt.query([]).map_err(|e| e.to_string())?;
+    let mut result = Vec::new();
+    while let Some(row) = rows.next().map_err(|e| e.to_string())? {
+        let currency: String = row.get(0).map_err(|e| e.to_string())?;
+        // Never expose USD as a configurable rate
+        if currency.to_uppercase() == BASE_CURRENCY {
+            continue;
+        }
+        result.push(ExchangeRate {
+            currency,
+            rate_to_base: row.get(1).map_err(|e| e.to_string())?,
+        });
+    }
+    Ok(result)
+}
+
+/// Batch-upsert exchange rates.  Rates with value <= 0 are rejected.
+/// USD entries are silently ignored — it is always 1.0.
+/// Passing an empty vec is a no-op (does not clear existing rates).
+#[tauri::command]
+pub fn exchange_rates_set(
+    workspace_id: String,
+    rates: Vec<ExchangeRate>,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    for r in &rates {
+        if r.rate_to_base <= 0.0 {
+            return Err(format!("Rate for {} must be positive (got {})", r.currency, r.rate_to_base));
+        }
+        if r.currency.trim().is_empty() {
+            return Err("Currency code cannot be empty".into());
+        }
+    }
+
+    let mut conn = get_workspace_conn(&workspace_id, &state)?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    {
+        let mut stmt = tx.prepare(
+            "INSERT INTO exchange_rates (currency, rate_to_base, updated_at)
+             VALUES (?, ?, now())
+             ON CONFLICT (currency) DO UPDATE SET
+                 rate_to_base = excluded.rate_to_base,
+                 updated_at   = now()"
+        ).map_err(|e| e.to_string())?;
+        for r in &rates {
+            // USD is the fixed base — skip silently
+            if r.currency.trim().to_uppercase() == BASE_CURRENCY {
+                continue;
+            }
+            stmt.execute(duckdb::params![r.currency.trim(), r.rate_to_base])
+                .map_err(|e| e.to_string())?;
+        }
+    }
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Return the list of currency codes that exist in mrr_log but have no
+/// entry in exchange_rates.  Used by the frontend to show a warning banner.
+#[tauri::command]
+pub fn currencies_missing_rates_get(workspace_id: String, state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    let conn = get_workspace_conn(&workspace_id, &state)?;
+    currencies_without_rates(&conn).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
@@ -133,10 +222,10 @@ mod tests {
         // Actually LTV engine defaults to 1.0 if setting missing
         let ltv1 = calculate_ltv(&conn).unwrap();
         let mar_ltv1 = &ltv1[1]; // Index 1 is Mar
-        assert_eq!(mar_ltv1.arpa, 112.5);
-        assert_eq!(mar_ltv1.churn_rate, 1.0/3.0);
+        assert!((mar_ltv1.arpa - 112.5).abs() < 1e-5);
+        assert!((mar_ltv1.churn_rate - 1.0/3.0).abs() < 1e-5);
         // LTV = (112.5 * 1.0) / (1/3) = 337.5
-        assert_eq!(mar_ltv1.ltv, 337.5);
+        assert!((mar_ltv1.ltv.unwrap() - 337.5).abs() < 1e-5);
 
         // 2. Set Gross Margin to 0.50
         conn.execute("INSERT INTO settings (key, value) VALUES (?, ?)", ["gross_margin", "0.50"]).unwrap();
@@ -144,7 +233,7 @@ mod tests {
         let ltv2 = calculate_ltv(&conn).unwrap();
         let mar_ltv2 = &ltv2[1];
         // LTV = (112.5 * 0.5) / (1/3) = 168.75
-        assert_eq!(mar_ltv2.ltv, 168.75);
+        assert!((mar_ltv2.ltv.unwrap() - 168.75).abs() < 1e-5);
 
         // 3. Marketing Spend and Payback
         // Payback = CAC / (ARPA * margin)
@@ -163,6 +252,6 @@ mod tests {
         // Margin = 0.50.
         // MRR contribution = ARPA * Margin = 45.833...
         // Payback months = CAC / MRR contrib = 500 / 45.833... = 10.909...
-        assert!((mar_payback.payback_months - 10.909090909090908).abs() < 1e-5);
+        assert!((mar_payback.payback_months.unwrap() - 10.909090909090908).abs() < 1e-5);
     }
 }

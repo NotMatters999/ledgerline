@@ -50,17 +50,26 @@ export const CoreChart: React.FC<CoreChartProps> = ({ option, className, style }
         };
         window.addEventListener('resize', handleResize);
 
+        const resizeObserver = new ResizeObserver(() => {
+            instanceRef.current?.resize();
+        });
+        resizeObserver.observe(chartRef.current);
+
         return () => {
             window.removeEventListener('resize', handleResize);
+            resizeObserver.disconnect();
             instanceRef.current?.dispose();
             instanceRef.current = null;
         };
     }, []); // empty deps — run once
 
     // Update the chart option whenever it changes, without recreating the instance.
+    // We call clear() first to flush any stale rendered elements (e.g. heatmap labels)
+    // before applying the new option, preventing label accumulation on re-renders.
     useEffect(() => {
         if (instanceRef.current) {
-            instanceRef.current.setOption(option, { notMerge: false });
+            instanceRef.current.clear();
+            instanceRef.current.setOption(option, { notMerge: true });
         }
     }, [option]);
 

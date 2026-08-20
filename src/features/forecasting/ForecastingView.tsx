@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { ForecastMovement } from '../../lib/ipc/engines';
+import { ForecastMovement, getForecast } from '../../lib/ipc/engines';
 import { ForecastChart } from '../../charts/ForecastChart';
 import { MetricCard } from '../dashboard/MetricCard';
+import { ErrorBanner } from '../../components/ErrorBanner';
+import { mapBackendError } from '../../utils/errors';
 
-export const ForecastingView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
+import { useWorkspaceStore } from '../../store/workspace';
+
+export const ForecastingView: React.FC = () => {
+    const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
     const [churnRate, setChurnRate] = useState<number>(2.0); // 2.0%
     const [expansionRate, setExpansionRate] = useState<number>(3.0); // 3.0%
     const [newMrr, setNewMrr] = useState<number>(1000); // $1,000
@@ -17,17 +21,14 @@ export const ForecastingView: React.FC<{ activeWorkspaceId: string }> = ({ activ
 
     const debounceRef = useRef<number | null>(null);
 
-    const fetchForecast = async (churn: number, exp: number, newM: number) => {
+    const fetchForecast = React.useCallback(async (churn: number, exp: number, newM: number) => {
         const startTime = performance.now();
         
         try {
-            const data = await invoke<ForecastMovement[]>('forecast_get', {
-                workspaceId: activeWorkspaceId,
-                params: {
-                    monthly_churn_rate: churn / 100.0,
-                    monthly_expansion_rate: exp / 100.0,
-                    new_mrr_per_month: newM
-                }
+            const data = await getForecast({
+                monthly_churn_rate: churn / 100.0,
+                monthly_expansion_rate: exp / 100.0,
+                new_mrr_per_month: newM
             });
             
             const endTime = performance.now();
@@ -44,7 +45,7 @@ export const ForecastingView: React.FC<{ activeWorkspaceId: string }> = ({ activ
         } catch (err: any) {
             setError(err.toString());
         }
-    };
+    }, [activeWorkspaceId]);
 
     useEffect(() => {
         // Debounce real-time inputs
@@ -59,7 +60,7 @@ export const ForecastingView: React.FC<{ activeWorkspaceId: string }> = ({ activ
         return () => {
             if (debounceRef.current) window.clearTimeout(debounceRef.current);
         };
-    }, [activeWorkspaceId, churnRate, expansionRate, newMrr]);
+    }, [churnRate, expansionRate, newMrr, fetchForecast]);
 
     const formatCurrency = (val: number) => 
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
@@ -86,17 +87,15 @@ export const ForecastingView: React.FC<{ activeWorkspaceId: string }> = ({ activ
                 )}
             </header>
 
-            {error && (
-                <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--status-danger)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                    {error}
-                </div>
+            {error && mapBackendError(error) && (
+                <ErrorBanner error={mapBackendError(error)} onClear={() => setError(null)} />
             )}
 
             <div className="grid-cards">
                 <MetricCard 
                     title={`Projected MRR (${endMonth})`} 
                     value={formatCurrency(endMrr)} 
-                    subtitle="At end of 12m period"
+                    subtitle="At end of 12-month period"
                 />
             </div>
 

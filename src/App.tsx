@@ -32,16 +32,16 @@ function App() {
   // Whenever the active workspace changes, refetch all stores with the correct ID
   useEffect(() => {
     if (activeId) {
-      fetchFinancials(activeId);
-      fetchCohort(activeId);
+      fetchFinancials();
+      fetchCohort();
     }
   }, [activeId, fetchFinancials, fetchCohort]);
 
   // Called by WorkspaceSwitcher after any create/switch/delete
   const handleActiveIdChange = useCallback((newId: string) => {
     if (newId) {
-      fetchFinancials(newId);
-      fetchCohort(newId);
+      fetchFinancials();
+      fetchCohort();
     }
   }, [fetchFinancials, fetchCohort]);
 
@@ -88,17 +88,19 @@ function App() {
 
       {/* Main Content Area */}
       <div className="content-wrapper">
-        {activeTab === 'dashboard'   && <Dashboard activeWorkspaceId={activeId} />}
-        {activeTab === 'cohorts'     && <CohortView activeWorkspaceId={activeId} />}
-        {activeTab === 'retention'   && <RetentionView activeWorkspaceId={activeId} />}
-        {activeTab === 'waterfall'   && <WaterfallView activeWorkspaceId={activeId} />}
-        {activeTab === 'economics'   && <UnitEconomicsView activeWorkspaceId={activeId} />}
-        {activeTab === 'customers'   && <CustomerEconomicsView activeWorkspaceId={activeId} />}
-        {activeTab === 'churn'       && <ChurnAnalyticsView activeWorkspaceId={activeId} />}
-        {activeTab === 'forecasting' && <ForecastingView activeWorkspaceId={activeId} />}
-        {activeTab === 'data'        && <DataManagementView activeWorkspaceId={activeId} />}
+        {activeTab === 'dashboard'   && <Dashboard onGoToSettings={() => setActiveTab('settings')} />}
+        {activeTab === 'cohorts'     && <CohortView />}
+        {activeTab === 'retention'   && <RetentionView />}
+        {activeTab === 'waterfall'   && <WaterfallView />}
+        {activeTab === 'economics'   && <UnitEconomicsView />}
+        {activeTab === 'customers'   && <CustomerEconomicsView />}
+        {activeTab === 'churn'       && <ChurnAnalyticsView />}
+        {activeTab === 'forecasting' && <ForecastingView />}
+        <div style={{ display: activeTab === 'data' ? 'block' : 'none' }}>
+            <DataManagementView />
+          </div>
         {activeTab === 'docs'        && <DocumentationView />}
-        {activeTab === 'settings'    && <SettingsView activeWorkspaceId={activeId} />}
+        {activeTab === 'settings'    && <SettingsView />}
       </div>
     </div>
   );

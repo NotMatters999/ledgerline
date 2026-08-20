@@ -16,7 +16,7 @@ export const LtvCacChart: React.FC<LtvCacChartProps> = ({ ltvData, cacData }) =>
         // Match CAC data to LTV months
         const cac = months.map(m => {
             const match = cacData.find(c => c.month.startsWith(m));
-            return match ? match.cac : 0;
+            return match ? match.cac : null;
         });
 
         return {
@@ -50,16 +50,20 @@ export const LtvCacChart: React.FC<LtvCacChartProps> = ({ ltvData, cacData }) =>
                 {
                     name: 'LTV',
                     type: 'line',
-                    smooth: true,
-                    lineStyle: { width: 3, color: '#34D399' }, // Emerald 400
+                    smooth: false, // LTV can jump sharply when churn_rate changes (discontinuous formula).
+                    showSymbol: true,
+                    symbolSize: 4,
+                    lineStyle: { width: 3, color: '#34D399' },
                     itemStyle: { color: '#34D399' },
                     data: ltv
                 },
                 {
                     name: 'CAC',
                     type: 'line',
-                    smooth: true,
-                    lineStyle: { width: 3, color: '#F43F5E' }, // Rose 500
+                    smooth: false, // CAC is null for months with no marketing spend; sharp jumps between data points.
+                    showSymbol: true,
+                    symbolSize: 4,
+                    lineStyle: { width: 3, color: '#F43F5E' },
                     itemStyle: { color: '#F43F5E' },
                     data: cac
                 }

@@ -25,12 +25,13 @@ pub struct CohortData {
 
 pub fn calculate_cohorts(conn: &Connection) -> Result<CohortData, duckdb::Error> {
     let mut stmt = conn.prepare(
-        "SELECT customer_id, 
-                date_trunc('month', period)::DATE as month_start, 
-                SUM(mrr_amount) as mrr 
-         FROM mrr_log 
-         GROUP BY customer_id, month_start 
-         ORDER BY customer_id, month_start"
+        "SELECT m.customer_id,
+                date_trunc('month', m.period)::DATE as month_start,
+                SUM(m.mrr_amount * COALESCE(er.rate_to_base, 1.0)) as mrr
+         FROM mrr_log m
+         LEFT JOIN exchange_rates er ON er.currency = m.currency
+         GROUP BY m.customer_id, month_start
+         ORDER BY m.customer_id, month_start"
     )?;
 
     let mut rows = stmt.query([])?;
@@ -82,14 +83,14 @@ pub fn calculate_cohorts(conn: &Connection) -> Result<CohortData, duckdb::Error>
 
     let mut result_rows = Vec::new();
     for (join_month, cells) in cohorts {
-        let (new_customers, new_revenue) = cells.get(&0).cloned().unwrap_or((0, 0.0));
+        let (new_customers, new_revenue) = cells.get(&0).copied().unwrap_or((0, 0.0));
         
         let mut data = Vec::new();
         // Determine the max month_index to ensure we fill missing cells with 0
-        let max_idx = cells.keys().last().cloned().unwrap_or(0);
+        let max_idx = cells.keys().last().copied().unwrap_or(0);
         
         for idx in 0..=max_idx {
-            let (retained_customers, retained_revenue) = cells.get(&idx).cloned().unwrap_or((0, 0.0));
+            let (retained_customers, retained_revenue) = cells.get(&idx).copied().unwrap_or((0, 0.0));
             data.push(CohortCell {
                 month_index: idx,
                 retained_customers,

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useWorkspaceStore } from '../store/workspace';
+import { InlineConfirm } from './InlineConfirm';
 
 interface Props {
     /** Called after any switch/create/delete so App can refetch data */
@@ -15,6 +16,8 @@ export const WorkspaceSwitcher: React.FC<Props> = ({ onActiveIdChange }) => {
     const [renameValue, setRenameValue] = useState('');
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
+    const [hoveredId, setHoveredId] = useState<string | null>(null);
+    const [hoveredNew, setHoveredNew] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
     const activeWorkspace = workspaces.find(w => w.id === activeId);
@@ -185,24 +188,14 @@ export const WorkspaceSwitcher: React.FC<Props> = ({ onActiveIdChange }) => {
                                 </div>
                             ) : deletingId === ws.id ? (
                                 /* Delete confirmation */
-                                <div style={{
-                                    padding: '0.5rem', borderRadius: '0.5rem', marginBottom: '2px',
-                                    background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-                                }}>
-                                    <p style={{ fontSize: '0.75rem', color: 'var(--status-danger)', marginBottom: '0.4rem' }}>
-                                        Delete "{ws.name}"? This cannot be undone.
-                                    </p>
-                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                        <button onClick={() => handleDelete(ws.id)}
-                                            style={{ ...btnStyle('var(--status-danger)'), flex: 1 }}>
-                                            Delete
-                                        </button>
-                                        <button onClick={() => setDeletingId(null)}
-                                            style={{ ...btnStyle('rgba(255,255,255,0.1)', 'var(--text-muted)'), flex: 1 }}>
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </div>
+                                <InlineConfirm
+                                    variant="stacked"
+                                    message={`Delete "${ws.name}"? This cannot be undone.`}
+                                    confirmText="Delete"
+                                    cancelText="Cancel"
+                                    onConfirm={() => handleDelete(ws.id)}
+                                    onCancel={() => setDeletingId(null)}
+                                />
                             ) : (
                                 /* Normal workspace row */
                                 <div
@@ -212,12 +205,12 @@ export const WorkspaceSwitcher: React.FC<Props> = ({ onActiveIdChange }) => {
                                         display: 'flex', alignItems: 'center', gap: '0.25rem',
                                         borderRadius: '0.5rem', padding: '0.375rem 0.5rem',
                                         marginBottom: '2px',
-                                        background: ws.id === activeId ? 'rgba(16,185,129,0.1)' : 'transparent',
+                                        background: ws.id === activeId ? 'rgba(16,185,129,0.1)' : (hoveredId === ws.id ? 'rgba(255,255,255,0.04)' : 'transparent'),
                                         cursor: 'pointer',
                                         transition: 'background var(--transition-fast)',
                                     }}
-                                    onMouseEnter={e => { if (ws.id !== activeId) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
-                                    onMouseLeave={e => { if (ws.id !== activeId) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                                    onMouseEnter={() => setHoveredId(ws.id)}
+                                    onMouseLeave={() => setHoveredId(null)}
                                 >
                                     {/* Checkmark for active */}
                                     <span style={{ width: '14px', flexShrink: 0, fontSize: '0.7rem', color: 'var(--accent-primary)' }}>
@@ -289,19 +282,15 @@ export const WorkspaceSwitcher: React.FC<Props> = ({ onActiveIdChange }) => {
                                 onClick={() => setCreating(true)}
                                 style={{
                                     width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                    padding: '0.375rem 0.5rem', background: 'transparent', border: 'none',
-                                    color: 'var(--text-muted)', cursor: 'pointer', borderRadius: '0.5rem',
+                                    padding: '0.375rem 0.5rem', border: 'none',
+                                    color: hoveredNew ? 'var(--text-primary)' : 'var(--text-muted)',
+                                    background: hoveredNew ? 'rgba(255,255,255,0.04)' : 'transparent',
+                                    cursor: 'pointer', borderRadius: '0.5rem',
                                     fontSize: '0.8rem', fontFamily: 'var(--font-sans)',
                                     transition: 'all var(--transition-fast)',
                                 }}
-                                onMouseEnter={e => {
-                                    (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)';
-                                    (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)';
-                                }}
-                                onMouseLeave={e => {
-                                    (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)';
-                                    (e.currentTarget as HTMLElement).style.background = 'transparent';
-                                }}
+                                onMouseEnter={() => setHoveredNew(true)}
+                                onMouseLeave={() => setHoveredNew(false)}
                             >
                                 <span style={{ fontSize: '1rem', color: 'var(--accent-primary)', lineHeight: 1 }}>+</span>
                                 New Workspace

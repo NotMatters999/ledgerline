@@ -1,6 +1,6 @@
 use duckdb::Connection;
 use serde::{Deserialize, Serialize};
-use chrono::{Datelike, NaiveDate, Utc};
+use chrono::{Datelike, NaiveDate};
 use crate::engines::mrr::calculate_mrr;
 
 #[derive(Debug, Deserialize)]
@@ -22,17 +22,23 @@ pub struct ForecastMovement {
 
 pub fn calculate_forecast(conn: &Connection, params: &ForecastParams) -> Result<Vec<ForecastMovement>, duckdb::Error> {
     let mrr_data = calculate_mrr(conn)?;
-    
-    let mut baseline_mrr = 0.0;
-    let today = Utc::now().date_naive();
-    let mut last_date = NaiveDate::from_ymd_opt(today.year(), today.month(), 1).unwrap();
 
-    if let Some(last_movement) = mrr_data.last() {
-        baseline_mrr = last_movement.ending;
-        if let Ok(d) = NaiveDate::parse_from_str(&last_movement.month, "%Y-%m-%d") {
-            last_date = d;
-        }
-    }
+    // If there is no historical MRR data, return an empty forecast.
+    // Do NOT fall back to the system clock — the forecast baseline must always
+    // be anchored to the latest period in the workspace data, never the wall clock.
+    let last_movement = match mrr_data.last() {
+        Some(m) => m,
+        None => return Ok(Vec::new()),
+    };
+
+    let baseline_mrr = last_movement.ending;
+
+    // Parse the last data period. If it can't be parsed, return empty rather
+    // than silently anchoring to today's date.
+    let last_date = match NaiveDate::parse_from_str(&last_movement.month, "%Y-%m-%d") {
+        Ok(d) => d,
+        Err(_) => return Ok(Vec::new()),
+    };
 
     let mut forecast = Vec::new();
     let mut current_mrr = baseline_mrr;
@@ -45,7 +51,7 @@ pub fn calculate_forecast(conn: &Connection, params: &ForecastParams) -> Result<
             m = 1;
             y += 1;
         }
-        current_date = NaiveDate::from_ymd_opt(y, m, 1).unwrap();
+        current_date = NaiveDate::from_ymd_opt(y, m, 1).unwrap_or_default();
 
         let churn = current_mrr * params.monthly_churn_rate;
         let expansion = current_mrr * params.monthly_expansion_rate;
@@ -65,6 +71,7 @@ pub fn calculate_forecast(conn: &Connection, params: &ForecastParams) -> Result<
 
     Ok(forecast)
 }
+
 
 #[cfg(test)]
 mod tests {

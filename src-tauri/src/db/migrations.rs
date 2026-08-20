@@ -2,6 +2,9 @@ use duckdb::{Connection, Result};
 
 const INITIAL_SCHEMA: &str = include_str!("../../migrations/0001_initial_schema.sql");
 const MONTHLY_ASSUMPTIONS: &str = include_str!("../../migrations/0002_monthly_assumptions.sql");
+const ADD_CATEGORY: &str = include_str!("../../migrations/0003_add_category.sql");
+const REPAIR_SCHEMA: &str = include_str!("../../migrations/0004_repair_schema.sql");
+const EXCHANGE_RATES: &str = include_str!("../../migrations/0005_exchange_rates.sql");
 
 struct Migration {
     version: i32,
@@ -16,6 +19,18 @@ const MIGRATIONS: &[Migration] = &[
     Migration {
         version: 2,
         script: MONTHLY_ASSUMPTIONS,
+    },
+    Migration {
+        version: 3,
+        script: ADD_CATEGORY,
+    },
+    Migration {
+        version: 4,
+        script: REPAIR_SCHEMA,
+    },
+    Migration {
+        version: 5,
+        script: EXCHANGE_RATES,
     },
 ];
 
@@ -90,6 +105,6 @@ mod tests {
         
         let mut stmt = conn.prepare("SELECT MAX(version) FROM schema_version").unwrap();
         let version: i32 = stmt.query_row([], |row| row.get(0)).unwrap();
-        assert_eq!(version, 2);
+        assert_eq!(version, 5);
     }
 }

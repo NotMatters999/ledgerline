@@ -3,11 +3,17 @@ import { useFinancialsStore } from '../../store/financials';
 
 import { LtvCacChart } from '../../charts/LtvCacChart';
 import { setSetting, getSettingF64, addMarketingSpend } from '../../lib/ipc/settings';
+import { percentToDecimal, decimalToPercent } from '../../utils/math';
 import { Tooltip } from '../../components/Tooltip';
+import { ErrorBanner } from '../../components/ErrorBanner';
+import { mapBackendError } from '../../utils/errors';
 
 
-export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
+import { useWorkspaceStore } from '../../store/workspace';
+
+export const UnitEconomicsView: React.FC = () => {
     const { ltv, cac, payback, mrr, isLoading, error, fetchData } = useFinancialsStore();
+    const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
 
     const [grossMarginInput, setGrossMarginInput] = useState<string>('');
     const [spendPeriodInput, setSpendPeriodInput] = useState<string>('');
@@ -19,18 +25,25 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
 
     // Initialize inputs
     useEffect(() => {
-        if (activeWorkspaceId && ltv.length === 0) {
-            fetchData(activeWorkspaceId);
+        if (activeWorkspaceId) {
+            fetchData();
+            
+            getSettingF64('gross_margin')
+                .then(val => setGrossMarginInput(decimalToPercent(val)))
+                .catch(() => setGrossMarginInput('100'));
         }
+    }, [activeWorkspaceId, fetchData]);
 
-        getSettingF64(activeWorkspaceId, 'gross_margin')
-            .then(val => setGrossMarginInput((val * 100).toString()))
-            .catch(() => setGrossMarginInput('100'));
-
+    useEffect(() => {
         if (mrr.length > 0) {
-            setSpendPeriodInput(mrr[mrr.length - 1].month);
+            const isValid = mrr.some(m => m.month === spendPeriodInput);
+            if (!isValid) {
+                setSpendPeriodInput(mrr[mrr.length - 1].month);
+            }
+        } else {
+            if (spendPeriodInput !== '') setSpendPeriodInput('');
         }
-    }, [activeWorkspaceId, ltv.length, mrr.length, mrr, fetchData]);
+    }, [mrr, spendPeriodInput]);
 
     const handleMarginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -41,11 +54,11 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
             if (isNaN(percentage) || percentage < 0 || percentage > 100) {
                 throw new Error("Gross margin must be between 0 and 100");
             }
-            const decimal = percentage / 100;
-            await setSetting(activeWorkspaceId, 'gross_margin', decimal.toString());
-            await fetchData(activeWorkspaceId);
+            const decimal = percentToDecimal(percentage);
+            await setSetting('gross_margin', decimal.toString());
+            await fetchData();
         } catch (err: any) {
-            setActionError(err.toString());
+            setActionError(err instanceof Error ? err.message : (typeof err === 'string' ? err : (JSON.stringify(err) || String(err))));
         } finally {
             setSubmittingMargin(false);
         }
@@ -64,17 +77,17 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
                 throw new Error("Please select a month");
             }
             
-            await addMarketingSpend(activeWorkspaceId, spendPeriodInput, amount, 'Total');
+            await addMarketingSpend(spendPeriodInput, amount);
             setSpendAmountInput('');
-            await fetchData(activeWorkspaceId);
+            await fetchData();
         } catch (err: any) {
-            setActionError(err.toString());
+            setActionError(err instanceof Error ? err.message : (typeof err === 'string' ? err : (JSON.stringify(err) || String(err))));
         } finally {
             setSubmittingSpend(false);
         }
     };
 
-    if (isLoading && ltv.length === 0) {
+    if (isLoading && mrr.length === 0) {
         return (
             <div className="flex-center" style={{ height: '100%', color: 'var(--text-primary)' }}>
                 <div className="spinner"></div>
@@ -82,28 +95,31 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
         );
     }
 
-    if (error && ltv.length === 0) {
-        return (
-            <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
-                <div className="glass-panel p-6" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
-                    <h2 className="page-title" style={{ fontSize: '1.25rem', color: 'var(--status-danger)' }}>Error Loading Unit Economics</h2>
-                    <p className="text-muted" style={{ marginTop: '0.5rem' }}>{error}</p>
+    if (error && mrr.length === 0) {
+        const mappedError = mapBackendError(error);
+        if (mappedError) {
+            return (
+                <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
+                    <div style={{ width: '100%', maxWidth: '600px' }}>
+                        <ErrorBanner error={mappedError} onClear={() => useFinancialsStore.setState({ error: null })} />
+                    </div>
                 </div>
-            </div>
-        );
+            );
+        }
     }
 
-    const currentLtv = ltv.length > 0 ? ltv[ltv.length - 1].ltv : 0;
-    const currentCac = cac.length > 0 ? cac[cac.length - 1].cac : 0;
-    const currentPayback = payback.length > 0 ? payback[payback.length - 1].payback_months : 0;
-    const currentRatio = currentCac > 0 ? currentLtv / currentCac : 0;
+    const currentLtv = ltv.length > 0 ? ltv[ltv.length - 1].ltv : null;
+    const currentCac = cac.length > 0 ? cac[cac.length - 1].cac : null;
+    const currentPayback = payback.length > 0 ? payback[payback.length - 1].payback_months : null;
+    const currentRatio = (currentCac !== null && currentCac > 0 && currentLtv !== null) ? currentLtv / currentCac : null;
 
     const formatCurrency = (val: number) => 
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
 
-    const ltvDisplay = !isFinite(currentLtv) || isNaN(currentLtv) ? 'Very High' : formatCurrency(currentLtv);
-    const paybackDisplay = !isFinite(currentPayback) || isNaN(currentPayback) ? 'N/A' : `${currentPayback.toFixed(1)} mo`;
-    const ratioDisplay = !isFinite(currentRatio) || isNaN(currentRatio) ? 'N/A' : `${currentRatio.toFixed(1)}x`;
+    const ltvDisplay = currentLtv === null ? 'N/A' : formatCurrency(currentLtv);
+    const cacDisplay = currentCac === null ? 'N/A' : formatCurrency(currentCac);
+    const paybackDisplay = currentPayback === null ? 'N/A' : `${currentPayback.toFixed(1)} mo`;
+    const ratioDisplay = currentRatio === null ? 'N/A' : `${currentRatio.toFixed(1)}x`;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -121,7 +137,7 @@ export const UnitEconomicsView: React.FC<{ activeWorkspaceId: string }> = ({ act
             <div className="grid-cards">
                 {[
                     { label: 'Customer LTV', value: ltvDisplay, tip: 'Lifetime Value = ARPA × Gross Margin ÷ Churn Rate. Estimates total revenue from an average customer over their lifetime.' },
-                    { label: 'Customer CAC', value: formatCurrency(currentCac), tip: 'Customer Acquisition Cost = Marketing Spend ÷ New Customers acquired that month.' },
+                    { label: 'Customer CAC', value: cacDisplay, tip: 'Customer Acquisition Cost = Marketing Spend ÷ New Customers acquired that month.' },
                     { label: 'LTV:CAC Ratio', value: ratioDisplay, tip: 'Benchmark: >3× is healthy for B2B SaaS. Below 1× means you spend more to acquire than you recover.' },
                     { label: 'Payback Period', value: paybackDisplay, tip: 'Months to recover CAC from gross margin. Benchmark: <12 months for efficient SaaS growth.' },
                 ].map(({ label, value, tip }) => (

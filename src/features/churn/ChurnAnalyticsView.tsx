@@ -2,31 +2,39 @@ import React, { useEffect, useMemo } from 'react';
 import { useFinancialsStore } from '../../store/financials';
 import { CoreChart } from '../../charts/CoreChart';
 import { Tooltip } from '../../components/Tooltip';
+import { ErrorBanner } from '../../components/ErrorBanner';
+import { mapBackendError } from '../../utils/errors';
+
+import { useWorkspaceStore } from '../../store/workspace';
 
 // Derive churn rate from retention data
-export const ChurnAnalyticsView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
+export const ChurnAnalyticsView: React.FC = () => {
     const { mrr, retention, isLoading, error, fetchData } = useFinancialsStore();
+    const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
 
     useEffect(() => {
-        if (activeWorkspaceId && mrr.length === 0) fetchData(activeWorkspaceId);
-    }, [activeWorkspaceId, mrr.length, fetchData]);
+        if (activeWorkspaceId) fetchData();
+    }, [activeWorkspaceId, fetchData]);
 
     // ── Summary metrics ─────────────────────────────────────────────────────
     const latestMrr = mrr.length > 0 ? mrr[mrr.length - 1] : null;
     const latestRet = retention.length > 0 ? retention[retention.length - 1] : null;
 
-    const logoChurnRate = latestRet
+    const logoChurnRate = (latestRet && latestRet.logo_retention !== null)
         ? ((1 - latestRet.logo_retention) * 100).toFixed(1)
         : '—';
-    const revenueChurnRate = latestRet
+    const revenueChurnRate = (latestRet && latestRet.grr !== null)
         ? ((1 - latestRet.grr) * 100).toFixed(1)
         : '—';
-    const netRevenueChurn = latestMrr
+    const grossRevenueChurn = latestMrr
         ? `$${latestMrr.churn.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+        : '—';
+    const netRevenueChurnValue = latestMrr
+        ? `$${(latestMrr.contraction + latestMrr.churn - latestMrr.expansion - latestMrr.reactivation).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
         : '—';
     const newVsChurn = latestMrr && latestMrr.churn > 0
         ? (latestMrr.new / latestMrr.churn).toFixed(2)
-        : '—';
+        : 'N/A';
 
     // ── Trend charts ─────────────────────────────────────────────────────────
     const churnTrendOption = useMemo(() => {
@@ -73,8 +81,9 @@ export const ChurnAnalyticsView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                     name: 'Churned Customers',
                     type: 'line',
                     yAxisIndex: 1,
-                    smooth: true,
-                    showSymbol: false,
+                    smooth: false, // Rate can be 0 for many months — smoothing implies a gradual rise that doesn't exist
+                    showSymbol: true,
+                    symbolSize: 4,
                     lineStyle: { color: '#F43F5E', width: 2, type: 'dashed' },
                     itemStyle: { color: '#F43F5E' },
                     data: churnedCustomers,
@@ -86,8 +95,8 @@ export const ChurnAnalyticsView: React.FC<{ activeWorkspaceId: string }> = ({ ac
     const logoChurnOption = useMemo(() => {
         if (retention.length === 0) return null;
         const months = retention.map(r => r.month.substring(0, 7));
-        const logoRet = retention.map(r => parseFloat(((1 - r.logo_retention) * 100).toFixed(2)));
-        const revenueRet = retention.map(r => parseFloat(((1 - r.grr) * 100).toFixed(2)));
+        const logoRet = retention.map(r => r.logo_retention !== null ? parseFloat(((1 - r.logo_retention) * 100).toFixed(2)) : 0);
+        const revenueRet = retention.map(r => r.grr !== null ? parseFloat(((1 - r.grr) * 100).toFixed(2)) : 0);
 
         return {
             backgroundColor: 'transparent',
@@ -109,8 +118,10 @@ export const ChurnAnalyticsView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                 {
                     name: 'Logo Churn %',
                     type: 'line',
-                    smooth: true,
-                    showSymbol: false,
+                    smooth: false, // FIXED Bug 7: churn rates sit at exact 0.0% for months before first event;
+                    // smoothing interpolates a false gradual rise through zero months.
+                    showSymbol: true,
+                    symbolSize: 4,
                     lineStyle: { color: '#F59E0B', width: 2 },
                     areaStyle: { color: 'rgba(245,158,11,0.07)' },
                     data: logoRet,
@@ -118,8 +129,9 @@ export const ChurnAnalyticsView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                 {
                     name: 'Revenue Churn %',
                     type: 'line',
-                    smooth: true,
-                    showSymbol: false,
+                    smooth: false, // same reason as Logo Churn %
+                    showSymbol: true,
+                    symbolSize: 4,
                     lineStyle: { color: '#F43F5E', width: 2 },
                     areaStyle: { color: 'rgba(244,63,94,0.07)' },
                     data: revenueRet,
@@ -128,7 +140,7 @@ export const ChurnAnalyticsView: React.FC<{ activeWorkspaceId: string }> = ({ ac
         };
     }, [retention]);
 
-    if (isLoading && mrr.length === 0) {
+    if (isLoading) {
         return (
             <div className="flex-center" style={{ height: '100%' }}>
                 <div className="spinner" />
@@ -136,15 +148,17 @@ export const ChurnAnalyticsView: React.FC<{ activeWorkspaceId: string }> = ({ ac
         );
     }
 
-    if (error && mrr.length === 0) {
-        return (
-            <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
-                <div className="glass-panel p-6" style={{ background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.2)' }}>
-                    <h2 className="page-title" style={{ fontSize: '1.25rem', color: 'var(--status-danger)' }}>Error Loading Churn Data</h2>
-                    <p className="text-muted" style={{ marginTop: '0.5rem' }}>{error}</p>
+    if (error) {
+        const mappedError = mapBackendError(error);
+        if (mappedError) {
+            return (
+                <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
+                    <div style={{ width: '100%', maxWidth: '600px' }}>
+                        <ErrorBanner error={mappedError} onClear={() => useFinancialsStore.setState({ error: null })} />
+                    </div>
                 </div>
-            </div>
-        );
+            );
+        }
     }
 
     return (
@@ -160,26 +174,32 @@ export const ChurnAnalyticsView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                     {
                         label: 'Logo Churn Rate',
                         value: logoChurnRate === '—' ? '—' : `${logoChurnRate}%`,
-                        tip: 'Percentage of customers who cancelled this month vs total customers at start of month.',
-                        danger: parseFloat(logoChurnRate) > 5,
+                        tip: 'Percentage of customers who canceled this month vs total customers at start of month.',
+                        danger: logoChurnRate !== '—' && parseFloat(logoChurnRate) > 5,
                     },
                     {
                         label: 'Revenue Churn Rate',
                         value: revenueChurnRate === '—' ? '—' : `${revenueChurnRate}%`,
                         tip: 'MRR lost to downgrades and cancellations, as a % of beginning MRR. AKA Gross Revenue Churn.',
-                        danger: parseFloat(revenueChurnRate) > 5,
+                        danger: revenueChurnRate !== '—' && parseFloat(revenueChurnRate) > 5,
                     },
                     {
                         label: 'Churned MRR (Last Mo.)',
-                        value: netRevenueChurn,
-                        tip: 'Absolute MRR lost to cancellations in the most recent month.',
+                        value: grossRevenueChurn,
+                        tip: 'Absolute MRR lost to cancellations in the most recent month (Gross Churn).',
+                        danger: false,
+                    },
+                    {
+                        label: 'Net MRR Churn',
+                        value: netRevenueChurnValue,
+                        tip: 'Absolute MRR lost minus MRR gained from existing customers (Contraction + Churn - Expansion - Reactivation).',
                         danger: false,
                     },
                     {
                         label: 'New / Churn Coverage',
-                        value: newVsChurn === '—' ? '—' : `${newVsChurn}×`,
+                        value: newVsChurn === 'N/A' ? 'N/A' : `${newVsChurn}×`,
                         tip: 'How many dollars of new MRR are being added for every dollar churned. >1× means you are growing despite churn.',
-                        danger: newVsChurn !== '—' && parseFloat(newVsChurn) < 1,
+                        danger: newVsChurn !== 'N/A' && parseFloat(newVsChurn) < 1,
                     },
                 ].map(({ label, value, tip, danger }) => (
                     <div

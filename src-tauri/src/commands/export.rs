@@ -14,7 +14,7 @@ fn get_workspace_conn(workspace_id: &str, state: &State<'_, AppState>) -> Result
     let mgr = state.workspace_manager.lock().unwrap();
     let workspaces = mgr.list_workspaces().map_err(|e| e.to_string())?;
     let ws = workspaces.iter().find(|w| w.id == workspace_id).ok_or("Workspace not found")?;
-    crate::db::connection::open_connection(&ws.db_path).map_err(|e| e.to_string())
+    crate::db::connection::open_connection(&ws.db_path, Some(workspace_id)).map_err(|e| e.to_string())
 }
 
 #[derive(Serialize)]
@@ -32,12 +32,12 @@ pub fn generate_csv(conn: &Connection) -> Result<CsvExportResult, String> {
     // MRR CSV
     let mut mrr_wtr = WriterBuilder::new().from_writer(vec![]);
     for row in &mrr_data { mrr_wtr.serialize(row).map_err(|e| e.to_string())?; }
-    let mrr_csv = String::from_utf8(mrr_wtr.into_inner().unwrap()).unwrap();
+    let mrr_csv = String::from_utf8(mrr_wtr.into_inner().map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
 
     // Retention CSV
     let mut ret_wtr = WriterBuilder::new().from_writer(vec![]);
     for row in &ret_data { ret_wtr.serialize(row).map_err(|e| e.to_string())?; }
-    let retention_csv = String::from_utf8(ret_wtr.into_inner().unwrap()).unwrap();
+    let retention_csv = String::from_utf8(ret_wtr.into_inner().map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
 
     // Cohorts CSV
     let mut coh_wtr = WriterBuilder::new().from_writer(vec![]);
@@ -62,15 +62,15 @@ pub fn generate_csv(conn: &Connection) -> Result<CsvExportResult, String> {
             }).map_err(|e| e.to_string())?;
         }
     }
-    let cohorts_csv = String::from_utf8(coh_wtr.into_inner().unwrap()).unwrap();
+    let cohorts_csv = String::from_utf8(coh_wtr.into_inner().map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
 
     Ok(CsvExportResult { mrr_csv, retention_csv, cohorts_csv })
 }
 
 #[tauri::command]
-pub fn export_csv(_workspace_id: String, state: State<'_, AppState>) -> Result<CsvExportResult, LedgerlineError> {
+pub fn csv_export(workspace_id: String, state: State<'_, AppState>) -> Result<CsvExportResult, LedgerlineError> {
     log_info("Export", "Starting CSV export generation");
-    let conn = get_workspace_conn(&_workspace_id, &state).map_err(LedgerlineError::from)?;
+    let conn = get_workspace_conn(&workspace_id, &state).map_err(LedgerlineError::from)?;
     let result = generate_csv(&conn).map_err(LedgerlineError::from)?;
     log_info("Export", "CSV export generation completed successfully");
     Ok(result)
@@ -81,10 +81,8 @@ pub fn generate_pdf(conn: &Connection) -> Result<Vec<u8>, String> {
     use genpdf::{Document, SimplePageDecorator};
     
     let font_bytes = include_bytes!("../../assets/fonts/arial.ttf").to_vec();
-    let font_data = match genpdf::fonts::FontData::new(font_bytes, None) {
-        Ok(data) => data,
-        Err(_) => return Err("Failed to parse embedded Arial font data".to_string()),
-    };
+    let font_data = genpdf::fonts::FontData::new(font_bytes, None)
+        .map_err(|_| "Failed to parse embedded Arial font data".to_string())?;
     
     let font_family = genpdf::fonts::FontFamily {
         regular: font_data.clone(),
@@ -113,9 +111,9 @@ pub fn generate_pdf(conn: &Connection) -> Result<Vec<u8>, String> {
 }
 
 #[tauri::command]
-pub fn export_pdf(_workspace_id: String, state: State<'_, AppState>) -> Result<Vec<u8>, LedgerlineError> {
+pub fn pdf_export(workspace_id: String, state: State<'_, AppState>) -> Result<Vec<u8>, LedgerlineError> {
     log_info("Export", "Starting PDF export generation");
-    let conn = get_workspace_conn(&_workspace_id, &state).map_err(LedgerlineError::from)?;
+    let conn = get_workspace_conn(&workspace_id, &state).map_err(LedgerlineError::from)?;
     let buffer = generate_pdf(&conn).map_err(LedgerlineError::from)?;
     log_info("Export", "PDF export generation completed successfully");
     Ok(buffer)

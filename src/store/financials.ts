@@ -15,7 +15,8 @@ interface FinancialsState {
     cac: CacMovement[];
     payback: PaybackMovement[];
 
-    fetchData: (workspaceId: string) => Promise<void>;
+    fetchData: () => Promise<void>;
+    clear: () => void;
 }
 
 export const useFinancialsStore = create<FinancialsState>((set) => ({
@@ -29,18 +30,18 @@ export const useFinancialsStore = create<FinancialsState>((set) => ({
     cac: [],
     payback: [],
 
-    fetchData: async (workspaceId: string) => {
+    fetchData: async () => {
         set({ isLoading: true, error: null });
         try {
-            // Parallel fetch to respect Section 10 IPC single-responsibility rule
-            const [mrr, arr, retention, ltv, cac, payback] = await Promise.all([
-                getMrr(workspaceId),
-                getArr(workspaceId),
-                getRetention(workspaceId),
-                getLtv(workspaceId),
-                getCac(workspaceId),
-                getPayback(workspaceId),
-            ]);
+            // Sequential — not Promise.all — because each command opens its own
+            // DuckDB connection. Concurrent opens on the same .duckdb file fail
+            // with an exclusive-lock error on DuckDB community edition.
+            const mrr       = await getMrr();
+            const arr       = await getArr();
+            const retention = await getRetention();
+            const ltv       = await getLtv();
+            const cac       = await getCac();
+            const payback   = await getPayback();
             
             set({
                 mrr,
@@ -52,7 +53,9 @@ export const useFinancialsStore = create<FinancialsState>((set) => ({
                 isLoading: false
             });
         } catch (error: any) {
-            set({ error: error.toString(), isLoading: false });
+            set({ error: error instanceof Error ? error.message : (typeof error === 'string' ? error : (JSON.stringify(error) || String(error))), isLoading: false });
         }
-    }
+    },
+
+    clear: () => set({ mrr: [], arr: [], retention: [], ltv: [], cac: [], payback: [], error: null, isLoading: false })
 }));

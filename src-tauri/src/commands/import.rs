@@ -1,40 +1,42 @@
 use tauri::State;
 use std::path::PathBuf;
 use crate::commands::workspace::AppState;
-use crate::import::pipeline::{preview, commit, PreviewResult, ImportError};
+use crate::import::pipeline::{preview, commit, PreviewResult, ImportResult, ImportError};
 use crate::db::connection::open_connection;
 use crate::utils::error::LedgerlineError;
 use crate::utils::logger::log_info;
 
 #[tauri::command]
 pub fn import_preview(_workspace_id: String, file_path: String, _state: State<'_, AppState>) -> Result<PreviewResult, LedgerlineError> {
-    // Just run preview
+    // Preview is a stateless file analysis operation — it does not touch the workspace DB.
+    // The workspace_id is accepted (prefixed with _ to suppress unused-variable warning) so
+    // Tauri's argument deserializer correctly receives the workspaceId the frontend injects.
     preview(PathBuf::from(file_path).as_path()).map_err(LedgerlineError::from)
 }
 
 #[tauri::command]
-pub fn import_commit(workspace_id: String, file_path: String, state: State<'_, AppState>) -> Result<(), LedgerlineError> {
+pub fn import_commit(workspace_id: String, file_path: String, state: State<'_, AppState>) -> Result<ImportResult, LedgerlineError> {
     log_info("Import", &format!("Starting import commit for file: {}", file_path));
-    let (ws_name, db_path) = {
+    let (ws_id, db_path) = {
         let mgr = state.workspace_manager.lock().unwrap();
         let workspaces = mgr.list_workspaces().map_err(|_| ImportError::Database(duckdb::Error::QueryReturnedNoRows))?;
         let ws = workspaces.iter().find(|w| w.id == workspace_id).ok_or_else(|| ImportError::Database(duckdb::Error::QueryReturnedNoRows))?;
-        (ws.name.clone(), ws.db_path.clone())
+        (ws.id.clone(), ws.db_path.clone())
     };
     
     // Automated Snapshot: Protect the ledger before massive mutation
     // This synchronously copies the .duckdb file (usually <100MB, taking ~5-50ms on modern SSDs).
-    if let Err(e) = state.backup_manager.backup(&db_path, &ws_name) {
+    if let Err(e) = state.backup_manager.backup(&db_path, &ws_id) {
         // If backup fails, we abort the import to prevent unsafe mutation without a rollback net
         return Err(LedgerlineError::from(ImportError::Parser(crate::import::parser::ParserError::Io(std::io::Error::other(format!("Failed to create safety snapshot: {}", e))))));
     }
 
-    let mut conn = open_connection(&db_path).map_err(LedgerlineError::from)?;
-    commit(&mut conn, PathBuf::from(file_path).as_path()).map_err(LedgerlineError::from)?;
+    let mut conn = open_connection(&db_path, Some(&ws_id)).map_err(LedgerlineError::from)?;
+    let result = commit(&mut conn, PathBuf::from(file_path).as_path()).map_err(LedgerlineError::from)?;
     
-    log_info("Import", "Import commit completed successfully");
+    log_info("Import", &format!("Import commit completed: {} inserted, {} updated", result.inserted, result.updated));
     
-    Ok(())
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -60,7 +62,7 @@ mod tests {
         fs::write(&ws.db_path, dummy_data).unwrap();
         
         let start = Instant::now();
-        bk_mgr.backup(&ws.db_path, &ws.name).unwrap();
+        bk_mgr.backup(&ws.db_path, &ws.id).unwrap();
         let elapsed = start.elapsed();
         
         // The spec requires 100k rows (approx 10-50MB) to import in < 5 seconds.

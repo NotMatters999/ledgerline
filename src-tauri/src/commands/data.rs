@@ -9,7 +9,7 @@ fn get_workspace_conn(workspace_id: &str, state: &State<'_, AppState>) -> Result
     let mgr = state.workspace_manager.lock().unwrap();
     let workspaces = mgr.list_workspaces().map_err(|e| e.to_string())?;
     let ws = workspaces.iter().find(|w| w.id == workspace_id).ok_or("Workspace not found")?;
-    crate::db::connection::open_connection(&ws.db_path).map_err(|e| e.to_string())
+    crate::db::connection::open_connection(&ws.db_path, Some(workspace_id)).map_err(|e| e.to_string())
 }
 
 // ─── Data row shape ───────────────────────────────────────────────────────────
@@ -21,6 +21,7 @@ pub struct MrrLogRow {
     pub period: String,
     pub mrr_amount: f64,
     pub currency: String,
+    pub category: Option<String>,
 }
 
 // ─── LIST: search + sort + paginate ──────────────────────────────────────────
@@ -48,7 +49,7 @@ pub fn mrr_log_list(
     let safe_dir = if sort_dir.to_uppercase() == "DESC" { "DESC" } else { "ASC" };
 
     let query = format!(
-        "SELECT rowid, customer_id, period::VARCHAR, mrr_amount, currency
+        "SELECT rowid, customer_id, period::VARCHAR, mrr_amount, currency, category
          FROM mrr_log
          WHERE customer_id ILIKE ? OR currency ILIKE ?
          ORDER BY {} {}
@@ -67,6 +68,7 @@ pub fn mrr_log_list(
                 period: row.get(2)?,
                 mrr_amount: row.get(3)?,
                 currency: row.get(4)?,
+                category: row.get(5)?,
             })
         },
     ).map_err(|e| e.to_string())?;
@@ -101,6 +103,7 @@ pub struct MrrLogAddPayload {
     pub period: String,
     pub mrr_amount: f64,
     pub currency: String,
+    pub category: Option<String>,
 }
 
 #[tauri::command]
@@ -118,7 +121,7 @@ pub fn mrr_log_add(
         &row.period,
         row.mrr_amount,
         &row.currency,
-        "Standard", // category not in UI, default to Standard
+        row.category.as_deref().unwrap_or("Standard"),
     ).map_err(|e| LedgerlineError::from(e.reason.as_str()))?;
 
     let mut conn = get_workspace_conn(&workspace_id, &state).map_err(LedgerlineError::from)?;
@@ -126,8 +129,8 @@ pub fn mrr_log_add(
     // Use a transaction for atomicity
     let tx = conn.transaction().map_err(|e| e.to_string())?;
     tx.execute(
-        "INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES (?, ?, ?, ?)",
-        duckdb::params![row.customer_id, row.period, row.mrr_amount, row.currency],
+        "INSERT INTO mrr_log (customer_id, period, mrr_amount, currency, category) VALUES (?, ?, ?, ?, ?)",
+        duckdb::params![row.customer_id, row.period, row.mrr_amount, row.currency, row.category.unwrap_or_else(|| "Standard".to_string())],
     ).map_err(|e| e.to_string())?;
     tx.commit().map_err(|e| e.to_string())?;
 
@@ -138,18 +141,54 @@ pub fn mrr_log_add(
 // ─── DELETE: by rowid ─────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn mrr_log_delete(
+pub fn mrr_log_delete_request(
     workspace_id: String,
     rowid: i64,
     state: State<'_, AppState>,
+    token_store: State<'_, crate::utils::token_store::SecureTokenStore>
+) -> Result<String, LedgerlineError> {
+    log_info("Data", &format!("Delete request initiated for MRR rowid={} in workspace {}", rowid, workspace_id));
+    
+    // Validate that the row exists before minting a token
+    let conn = get_workspace_conn(&workspace_id, &state).map_err(LedgerlineError::from)?;
+    let exists: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM mrr_log WHERE rowid = ?)",
+        duckdb::params![rowid],
+        |row| row.get(0)
+    ).map_err(|e| LedgerlineError::from(e.to_string()))?;
+    
+    if !exists {
+        return Err(LedgerlineError::from("Row not found"));
+    }
+
+    let token = token_store.mint(crate::utils::token_store::ActionType::DeleteMrrRow { 
+        workspace_id: workspace_id.clone(), 
+        rowid 
+    });
+    
+    Ok(token)
+}
+
+#[tauri::command]
+pub fn mrr_log_delete_confirm(
+    workspace_id: String,
+    rowid: i64,
+    token: String,
+    state: State<'_, AppState>,
+    token_store: State<'_, crate::utils::token_store::SecureTokenStore>
 ) -> Result<MrrLogRow, LedgerlineError> {
-    log_info("Data", &format!("Deleting MRR row rowid={}", rowid));
+    token_store.consume(&token, &crate::utils::token_store::ActionType::DeleteMrrRow { 
+        workspace_id: workspace_id.clone(), 
+        rowid 
+    }).map_err(LedgerlineError::from)?;
+
+    log_info("Data", &format!("Delete confirmed for MRR rowid={} in workspace {}", rowid, workspace_id));
 
     let mut conn = get_workspace_conn(&workspace_id, &state).map_err(LedgerlineError::from)?;
 
-    // Fetch before deleting so the caller can cache it for undo
+    // Fetch before deleting so the caller can cache it for undo/UI purposes
     let deleted_row = conn.query_row(
-        "SELECT rowid, customer_id, period::VARCHAR, mrr_amount, currency FROM mrr_log WHERE rowid = ?",
+        "SELECT rowid, customer_id, period::VARCHAR, mrr_amount, currency, category FROM mrr_log WHERE rowid = ?",
         duckdb::params![rowid],
         |row| Ok(MrrLogRow {
             rowid: row.get(0)?,
@@ -157,14 +196,17 @@ pub fn mrr_log_delete(
             period: row.get(2)?,
             mrr_amount: row.get(3)?,
             currency: row.get(4)?,
+            category: row.get(5)?,
         }),
     ).map_err(|e| LedgerlineError::from(e.to_string()))?;
 
     let tx = conn.transaction().map_err(|e| e.to_string())?;
     let affected = tx.execute("DELETE FROM mrr_log WHERE rowid = ?", duckdb::params![rowid])
         .map_err(|e| e.to_string())?;
+    
     if affected == 0 {
-        return Err(LedgerlineError::from("Row not found"));
+        // Technically unreachable if validation above passed and no other writers exist
+        return Err(LedgerlineError::from("Row not found during delete execution"));
     }
     tx.commit().map_err(|e| e.to_string())?;
 

@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { useFinancialsStore } from '../../store/financials';
 import { WaterfallChart } from '../../charts/WaterfallChart';
+import { ErrorBanner } from '../../components/ErrorBanner';
+import { mapBackendError } from '../../utils/errors';
 
-interface Props { activeWorkspaceId: string; }
+import { useWorkspaceStore } from '../../store/workspace';
 
-export const WaterfallView: React.FC<Props> = ({ activeWorkspaceId }) => {
+export const WaterfallView: React.FC = () => {
     const { mrr, isLoading, error, fetchData } = useFinancialsStore();
+    const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
     const [selectedMonth, setSelectedMonth] = useState<string>('');
 
     useEffect(() => {
-        if (activeWorkspaceId && mrr.length === 0) {
-            fetchData(activeWorkspaceId);
+        if (activeWorkspaceId) {
+            fetchData();
         }
-    }, [activeWorkspaceId, mrr.length, fetchData]);
+    }, [activeWorkspaceId, fetchData]);
 
     useEffect(() => {
         if (mrr.length > 0 && !selectedMonth) {
@@ -20,7 +23,7 @@ export const WaterfallView: React.FC<Props> = ({ activeWorkspaceId }) => {
         }
     }, [mrr, selectedMonth]);
 
-    if (isLoading && mrr.length === 0) {
+    if (isLoading) {
         return (
             <div className="flex-center" style={{ height: '100%', color: 'var(--text-primary)' }}>
                 <div className="spinner"></div>
@@ -28,15 +31,17 @@ export const WaterfallView: React.FC<Props> = ({ activeWorkspaceId }) => {
         );
     }
 
-    if (error && mrr.length === 0) {
-        return (
-            <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
-                <div className="glass-panel p-6" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
-                    <h2 className="page-title" style={{ fontSize: '1.25rem', color: 'var(--status-danger)' }}>Error Loading Waterfall</h2>
-                    <p className="text-muted" style={{ marginTop: '0.5rem' }}>{error}</p>
+    if (error) {
+        const mappedError = mapBackendError(error);
+        if (mappedError) {
+            return (
+                <div className="flex-center" style={{ height: '100%', padding: '2rem' }}>
+                    <div style={{ width: '100%', maxWidth: '600px' }}>
+                        <ErrorBanner error={mappedError} onClear={() => useFinancialsStore.setState({ error: null })} />
+                    </div>
                 </div>
-            </div>
-        );
+            );
+        }
     }
 
     const data = mrr.find(m => m.month === selectedMonth);

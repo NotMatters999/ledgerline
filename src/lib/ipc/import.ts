@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invokeWorkspace } from './client';
 
 export interface MappedColumns {
     customer_id_idx: number | null;
@@ -14,6 +14,8 @@ export interface PreviewResult {
     date_format: string | null;
     // 5-tuple: (customer_id, date_iso, amount, currency, category) — matches Rust tuple serialization
     sample_normalized: [string, string, number, string, string][];
+    // total non-blank parseable rows in the full file — used for the confirm button label
+    total_rows: number;
 }
 
 export interface ValidationError {
@@ -21,10 +23,16 @@ export interface ValidationError {
     reason: string;
 }
 
-export async function importPreview(workspaceId: string, filePath: string): Promise<PreviewResult> {
-    return await invoke<PreviewResult>('import_preview', { workspaceId, filePath });
+/** Returned by importCommit — breakdown of newly inserted vs. overwritten rows. */
+export interface ImportResult {
+    inserted: number;
+    updated: number;
 }
 
-export async function importCommit(workspaceId: string, filePath: string): Promise<void> {
-    return await invoke<void>('import_commit', { workspaceId, filePath });
+export async function importPreview(filePath: string): Promise<PreviewResult> {
+    return await invokeWorkspace<PreviewResult>('import_preview', { filePath });
+}
+
+export async function importCommit(filePath: string): Promise<ImportResult> {
+    return await invokeWorkspace<ImportResult>('import_commit', { filePath });
 }

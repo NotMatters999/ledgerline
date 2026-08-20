@@ -58,7 +58,16 @@ fn parse_excel(path: &Path) -> Result<ParsedFile, ParserError> {
             Data::Float(f) => f.to_string(),
             Data::Int(i) => i.to_string(),
             Data::Bool(b) => b.to_string(),
-            Data::DateTime(d) => d.to_string(),
+            Data::DateTime(d) => {
+                let d_f64 = d.as_f64();
+                if d_f64 >= 60.0 {
+                    chrono::NaiveDate::from_ymd_opt(1899, 12, 30).and_then(|base| base.checked_add_signed(chrono::Duration::days(d_f64 as i64))).map(|dt| dt.format("%Y-%m-%d").to_string()).unwrap_or_else(|| d.to_string())
+                } else if d_f64 > 0.0 {
+                    chrono::NaiveDate::from_ymd_opt(1899, 12, 31).and_then(|base| base.checked_add_signed(chrono::Duration::days(d_f64 as i64))).map(|dt| dt.format("%Y-%m-%d").to_string()).unwrap_or_else(|| d.to_string())
+                } else {
+                    d.to_string()
+                }
+            },
             Data::DateTimeIso(d) => d.to_string(),
             Data::DurationIso(d) => d.to_string(),
             Data::Error(e) => e.to_string(),
@@ -74,7 +83,16 @@ fn parse_excel(path: &Path) -> Result<ParsedFile, ParserError> {
             Data::Float(f) => f.to_string(),
             Data::Int(i) => i.to_string(),
             Data::Bool(b) => b.to_string(),
-            Data::DateTime(d) => d.to_string(),
+            Data::DateTime(d) => {
+                let d_f64 = d.as_f64();
+                if d_f64 >= 60.0 {
+                    chrono::NaiveDate::from_ymd_opt(1899, 12, 30).and_then(|base| base.checked_add_signed(chrono::Duration::days(d_f64 as i64))).map(|dt| dt.format("%Y-%m-%d").to_string()).unwrap_or_else(|| d.to_string())
+                } else if d_f64 > 0.0 {
+                    chrono::NaiveDate::from_ymd_opt(1899, 12, 31).and_then(|base| base.checked_add_signed(chrono::Duration::days(d_f64 as i64))).map(|dt| dt.format("%Y-%m-%d").to_string()).unwrap_or_else(|| d.to_string())
+                } else {
+                    d.to_string()
+                }
+            },
             Data::DateTimeIso(d) => d.to_string(),
             Data::DurationIso(d) => d.to_string(),
             Data::Error(e) => e.to_string(),

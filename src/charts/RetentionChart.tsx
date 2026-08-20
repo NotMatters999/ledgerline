@@ -9,14 +9,14 @@ interface RetentionChartProps {
 export const RetentionChart: React.FC<RetentionChartProps> = ({ data }) => {
     const option = useMemo(() => {
         const months = data.map(d => d.month.substring(0, 7)); // YYYY-MM
-        const nrr = data.map(d => (d.nrr * 100).toFixed(2));
-        const grr = data.map(d => (d.grr * 100).toFixed(2));
+        const nrr = data.map(d => d.nrr !== null ? (d.nrr * 100).toFixed(2) : null);
+        const grr = data.map(d => d.grr !== null ? (d.grr * 100).toFixed(2) : null);
 
         return {
             backgroundColor: 'transparent',
             tooltip: {
                 trigger: 'axis',
-                valueFormatter: (value: any) => `${value}%`
+                valueFormatter: (value: any) => value != null ? `${value}%` : '-'
             },
             legend: {
                 data: ['NRR', 'GRR'],
@@ -49,8 +49,11 @@ export const RetentionChart: React.FC<RetentionChartProps> = ({ data }) => {
                 {
                     name: 'NRR',
                     type: 'line',
-                    smooth: true,
-                    lineStyle: { width: 3, color: '#A78BFA' }, // Purple 400
+                    smooth: false, // NRR is a rate; can be 100% flat for many months before any churn/expansion occurs.
+                    // Smoothing would falsely imply gradual drift through flat periods.
+                    showSymbol: true,
+                    symbolSize: 4,
+                    lineStyle: { width: 3, color: '#A78BFA' },
                     itemStyle: { color: '#A78BFA' },
                     areaStyle: {
                         color: {
@@ -67,8 +70,10 @@ export const RetentionChart: React.FC<RetentionChartProps> = ({ data }) => {
                 {
                     name: 'GRR',
                     type: 'line',
-                    smooth: true,
-                    lineStyle: { width: 3, color: '#FCD34D' }, // Amber 300
+                    smooth: false, // same reason as NRR
+                    showSymbol: true,
+                    symbolSize: 4,
+                    lineStyle: { width: 3, color: '#FCD34D' },
                     itemStyle: { color: '#FCD34D' },
                     data: grr
                 }
@@ -77,9 +82,9 @@ export const RetentionChart: React.FC<RetentionChartProps> = ({ data }) => {
     }, [data]);
 
     return (
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl w-full h-[400px]">
-            <h3 className="text-gray-300 font-medium mb-4">Retention (NRR & GRR)</h3>
-            <div className="w-full h-[320px]">
+        <div className="glass-panel p-6" style={{ width: '100%', height: '400px' }}>
+            <h3 className="card-title" style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>Retention (NRR & GRR)</h3>
+            <div style={{ width: '100%', height: '320px' }}>
                 <CoreChart option={option} />
             </div>
         </div>

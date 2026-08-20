@@ -1,20 +1,19 @@
 import React, { useState } from 'react';
 import { exportCsv, exportPdf, downloadBlob } from '../../lib/ipc/export';
 
-interface Props {
-    activeWorkspaceId: string;
-}
+import { useWorkspaceStore } from '../../store/workspace';
 
-export const ExportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
+export const ExportButton: React.FC = () => {
     const [isExporting, setIsExporting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showMenu, setShowMenu] = useState(false);
+    const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
 
     const handleCsvExport = async () => {
         setIsExporting(true);
         setError(null);
         try {
-            const data = await exportCsv(activeWorkspaceId);
+            const data = await exportCsv();
             // Download as 3 separate files or just combine them?
             // A combined CSV with clear section headers is usually easiest for a single download
             const combined = `--- MRR LOG ---\n${data.mrr_csv}\n\n--- RETENTION LOG ---\n${data.retention_csv}\n\n--- COHORTS LOG ---\n${data.cohorts_csv}`;
@@ -31,7 +30,7 @@ export const ExportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
         setIsExporting(true);
         setError(null);
         try {
-            const data = await exportPdf(activeWorkspaceId);
+            const data = await exportPdf();
             // Convert Array of numbers to Uint8Array for Blob
             const u8 = new Uint8Array(data);
             downloadBlob(u8, 'ledgerline_report.pdf', 'application/pdf');

@@ -34,40 +34,7 @@ fn test_fix2_financial_engines_and_reactivation() {
     // run_migrations creates mrr_log, monthly_assumptions, settings, etc.
     run_migrations(&mut conn).unwrap();
 
-    conn.execute_batch("
-        -- Jan: A($100), B($100) → New:200, Ending:200
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('A', '2024-01-01', 100.0, 'USD');
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('B', '2024-01-01', 100.0, 'USD');
-
-        -- Feb: A churns. B expands($150). C is new($50).
-        -- Beginning:200, Churn:100, Expansion:50, New:50, Ending:200
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('B', '2024-02-01', 150.0, 'USD');
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('C', '2024-02-01', 50.0, 'USD');
-
-        -- Mar: A returns exactly 1 month later (gap=2 months from Jan to Mar, diff_months<=2) → Expansion
-        --      B stays($150). C churns.
-        -- Beginning:200, Expansion:100 (A), Churn:50 (C), Ending:250
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('A', '2024-03-01', 100.0, 'USD');
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('B', '2024-03-01', 150.0, 'USD');
-
-        -- Apr: C returns after 2 months gap (Feb→Apr: diff_months=2, which is <=2 in code)
-        --      B contracts($100). A stays($100).
-        -- Wait: in mrr.rs: diff_months <= 2 is Expansion, > 2 is Reactivation
-        -- C last active was Feb. Apr - Feb = 2 months. That means diff_months=2 → Expansion (<=2).
-        -- So for actual Reactivation, we need diff_months > 2 i.e. a customer absent for 3+ months.
-        -- Let's add E that was in Jan, absent Feb+Mar, returns in Apr → diff=3 → Reactivation.
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('A', '2024-04-01', 100.0, 'USD');
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('B', '2024-04-01', 100.0, 'USD');
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('C', '2024-04-01', 50.0, 'USD');
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('E', '2024-01-01', 80.0, 'USD');
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('E', '2024-04-01', 80.0, 'USD');
-
-        -- monthly_assumptions for CAC/LTV assertions
-        INSERT INTO monthly_assumptions (month, marketing_spend, gross_margin) VALUES ('2024-01', 1000.0, 0.8);
-        INSERT INTO monthly_assumptions (month, marketing_spend, gross_margin) VALUES ('2024-02', 500.0, 0.85);
-        INSERT INTO monthly_assumptions (month, marketing_spend, gross_margin) VALUES ('2024-03', 1500.0, 0.9);
-        INSERT INTO monthly_assumptions (month, marketing_spend, gross_margin) VALUES ('2024-04', 2000.0, 0.9);
-    ").unwrap();
+    conn.execute_batch(include_str!("fixtures/mrr_reactivation_setup.sql")).unwrap();
 
     let mrr = calculate_mrr(&conn).unwrap();
 
@@ -85,20 +52,21 @@ fn test_fix2_financial_engines_and_reactivation() {
     assert_eq!(feb.ending, 200.0, "Feb ending: 280-180+50+50");
 
     let mar = &mrr[2];
-    // Mar: A returns after 1 calendar month (Jan→Mar = diff_months=2, <=2 → Expansion in code)
+    // Mar: A returns after 1 calendar month (Jan→Mar).
+    // With the new math fix, this is properly Reactivation, not Expansion!
     // C churns. B flat.
-    assert_eq!(mar.expansion, 100.0, "A returned exactly 1 calendar month gap → Expansion in code (diff_months=2<=2)");
-    assert_eq!(mar.reactivation, 0.0, "No reactivation in Mar");
+    assert_eq!(mar.expansion, 0.0, "No expansion in Mar");
+    assert_eq!(mar.reactivation, 100.0, "A returned exactly 1 calendar month gap → Reactivation");
     assert_eq!(mar.churn, 50.0, "C churns in Mar");
     assert_eq!(mar.ending, 250.0, "Mar ending: 200-50+100=250");
 
     let apr = &mrr[3];
-    // Apr: C returns after 1 calendar month (Mar→Apr = diff_months=1, <=2 → Expansion)
-    //      E returns after 3 months (Jan→Apr = diff_months=3, >2 → Reactivation)
-    //      B contracts: 150→100 (-50). A flat.
-    assert_eq!(apr.reactivation, 80.0, "E returned 3 months later → Reactivation");
-    assert_eq!(apr.contraction, 50.0, "B contracted: 150→100");
-    assert_eq!(apr.ending, 330.0, "Apr ending: 250+80+50-50=330");
+    // Apr: C returns after 2 calendar months (Feb->Apr = diff_months=2, >=2 -> Reactivation)
+    //      E returns after 3 months (Jan->Apr = diff_months=3, >=2 -> Reactivation)
+    //      B contracts: 150->100 (-50). A flat.
+    assert_eq!(apr.reactivation, 130.0, "C + E both returned with >= 2 months gap -> Reactivation");
+    assert_eq!(apr.contraction, 50.0, "B contracted: 150->100");
+    assert_eq!(apr.ending, 330.0, "Apr ending: 250+130(reactivation)-50(contraction)=330");
 
     // ARR = Ending MRR × 12
     let arr = calculate_arr(&conn).unwrap();
@@ -108,7 +76,7 @@ fn test_fix2_financial_engines_and_reactivation() {
     // CAC: Jan spend=1000, new_customers=3 → CAC=333.33
     let cac = calculate_cac(&conn).unwrap();
     let expected_jan_cac = 1000.0 / 3.0;
-    assert!((cac[0].cac - expected_jan_cac).abs() < 0.01, "Jan CAC = 1000/3 = {:.2}, got {:.2}", expected_jan_cac, cac[0].cac);
+    assert!((cac[0].cac.unwrap() - expected_jan_cac).abs() < 0.01, "Jan CAC = 1000/3 = {:.2}, got {:.2}", expected_jan_cac, cac[0].cac.unwrap());
 
     // LTV: gross_margin from monthly_assumptions
     let ltv = calculate_ltv(&conn).unwrap();
@@ -121,7 +89,7 @@ fn test_fix2_financial_engines_and_reactivation() {
 fn test_fix2_forecast_speed() {
     let mut conn = Connection::open_in_memory().unwrap();
     run_migrations(&mut conn).unwrap();
-    conn.execute_batch("INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('A', '2024-01-01', 100.0, 'USD')").unwrap();
+    conn.execute_batch(include_str!("fixtures/forecast_speed_setup.sql")).unwrap();
 
     let params = ForecastParams {
         monthly_churn_rate: 0.05,
@@ -158,11 +126,8 @@ fn test_fix1_backup_system_roundtrip() {
 
     // 2. Seed real data — MUST run migrations first so mrr_log exists
     {
-        let mut conn = ledgerline_lib::db::connection::open_connection(&ws.db_path).unwrap();
-        run_migrations(&mut conn).unwrap();
-        conn.execute_batch("
-            INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('Z', '2024-01-01', 999.0, 'USD');
-        ").unwrap();
+        let conn = ledgerline_lib::db::connection::open_connection(&ws.db_path, Some(&ws.id)).unwrap();
+        conn.execute_batch(include_str!("fixtures/backup_roundtrip_setup.sql")).unwrap();
     }
 
     // 3. Create backup via backend command
@@ -186,7 +151,7 @@ fn test_fix1_backup_system_roundtrip() {
 
     // 7. Query restored workspace and confirm data is intact
     assert!(ws.db_path.exists(), "Restored DB must exist");
-    let conn = ledgerline_lib::db::connection::open_connection(&ws.db_path).unwrap();
+    let conn = ledgerline_lib::db::connection::open_connection(&ws.db_path, Some(&ws.id)).unwrap();
     let count: i64 = conn.query_row("SELECT count(*) FROM mrr_log", [], |row| row.get(0)).unwrap();
     let amount: f64 = conn.query_row("SELECT mrr_amount FROM mrr_log WHERE customer_id = 'Z'", [], |row| row.get(0)).unwrap();
 
@@ -201,9 +166,7 @@ fn test_fix1_backup_system_roundtrip() {
 fn test_fix3_export_system_validity() {
     let mut conn = Connection::open_in_memory().unwrap();
     run_migrations(&mut conn).unwrap();
-    conn.execute_batch("
-        INSERT INTO mrr_log (customer_id, period, mrr_amount, currency) VALUES ('A', '2024-01-01', 100.0, 'USD');
-    ").unwrap();
+    conn.execute_batch(include_str!("fixtures/export_validity_setup.sql")).unwrap();
 
     // CSV: call generate_csv (pure logic, no Tauri State)
     let csv_result = generate_csv(&conn).unwrap();
@@ -222,7 +185,7 @@ fn test_fix3_export_system_validity() {
     // arial.ttf is embedded at compile-time via include_bytes! in export.rs
     let pdf_bytes = generate_pdf(&conn).unwrap();
     println!("--- EXPORT SYSTEM (PDF) ---");
-    println!("PDF size: {} bytes", pdf_bytes.len());
+    println!("PDF size: {}", pdf_bytes.len());
     assert!(pdf_bytes.len() > 5, "PDF must be more than 5 bytes");
     // Verify PDF magic bytes: every valid PDF starts with %PDF-
     assert_eq!(&pdf_bytes[0..5], b"%PDF-", "PDF magic bytes must be %PDF-, got: {:?}", &pdf_bytes[0..5]);
@@ -234,4 +197,90 @@ fn uuid_simple() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().subsec_nanos();
     format!("{:x}", nanos)
+}
+
+// ─── Fix 4: SecureTokenStore and Cross-Action Replay Protection ─────────────────
+#[test]
+fn test_secure_token_store_semantics() {
+    use ledgerline_lib::utils::token_store::{SecureTokenStore, ActionType};
+    let store = SecureTokenStore::new();
+
+    // 1. Single Use
+    let token1 = store.mint(ActionType::DeleteWorkspace { id: "ws1".to_string() });
+    assert!(store.consume(&token1, &ActionType::DeleteWorkspace { id: "ws1".to_string() }).is_ok());
+    // Second use must fail
+    assert!(store.consume(&token1, &ActionType::DeleteWorkspace { id: "ws1".to_string() }).is_err(), "Token must be single-use");
+
+    // 2. Cross-action scoping (Replay Attack)
+    let token2 = store.mint(ActionType::DeleteMrrRow { workspace_id: "ws1".to_string(), rowid: 42 });
+    
+    // Attempting to use a DeleteMrrRow token for DeleteWorkspace should fail
+    let replay_result = store.consume(&token2, &ActionType::DeleteWorkspace { id: "ws1".to_string() });
+    assert!(replay_result.is_err(), "Cross-action replay must be rejected");
+    assert_eq!(replay_result.unwrap_err(), "Token scope mismatch (cross-action replay blocked)");
+
+    // Since the previous consume attempt failed due to scoping, the token is ALSO burned (single-use guarantee).
+    // Attempting to consume it correctly now should fail with invalid/expired.
+    let correct_result = store.consume(&token2, &ActionType::DeleteMrrRow { workspace_id: "ws1".to_string(), rowid: 42 });
+    assert!(correct_result.is_err());
+    assert_eq!(correct_result.unwrap_err(), "Invalid or expired token");
+}
+
+// ─── Fix 4: Exactly-Once Migration Invariant & Restore Interaction ───────────
+#[test]
+fn test_migration_cache_and_restore_interaction() {
+    use ledgerline_lib::commands::workspace::AppState;
+    use ledgerline_lib::utils::token_store::SecureTokenStore;
+
+    let temp_dir = std::env::temp_dir().join(format!("ledgerline_migration_test_{}", uuid_simple()));
+    std::fs::create_dir_all(&temp_dir).unwrap();
+
+    let ws_manager = std::sync::Mutex::new(ledgerline_lib::workspace::manager::WorkspaceManager::new(&temp_dir).unwrap());
+    let bk_manager = ledgerline_lib::workspace::backup::BackupManager::new(&temp_dir);
+    
+    let app_state = AppState {
+        workspace_manager: ws_manager,
+        backup_manager: bk_manager,
+    };
+    let token_store = SecureTokenStore::new();
+
+    let ws = {
+        let mgr = app_state.workspace_manager.lock().unwrap();
+        mgr.create_workspace("Migration Test WS").unwrap()
+    };
+    
+    // 1. First connection: Migrations MUST run (cache is empty)
+    {
+        // open_connection will run migrations and cache it
+        let conn = ledgerline_lib::db::connection::open_connection(&ws.db_path, Some(&ws.id)).unwrap();
+        // Insert a row to prove schema exists
+        conn.execute_batch(include_str!("fixtures/migration_cache_insert.sql")).unwrap();
+    }
+    
+    // 2. Second connection: Migrations MUST NOT run (cached)
+    {
+        let conn = ledgerline_lib::db::connection::open_connection(&ws.db_path, Some(&ws.id)).unwrap();
+        let count: i64 = conn.query_row("SELECT count(*) FROM mrr_log", [], |row| row.get(0)).unwrap();
+        assert_eq!(count, 1);
+    }
+    
+    // 3. Backup the database using the command layer
+    let backup_filename = app_state.backup_manager.backup(&ws.db_path, &ws.id).unwrap().file_name().unwrap().to_str().unwrap().to_string();
+    
+    // 4. Mutate database (e.g. drop table) to simulate a stale/different schema
+    {
+        let conn = ledgerline_lib::db::connection::open_connection(&ws.db_path, Some(&ws.id)).unwrap();
+        conn.execute_batch(include_str!("fixtures/migration_cache_drop.sql")).unwrap();
+    }
+    
+    // 5. Restore using the full token round trip (core functions instead of raw Tauri wrappers)
+    let token = ledgerline_lib::commands::backup::core_backup_restore_request(ws.id.clone(), backup_filename.clone(), &token_store).unwrap();
+    ledgerline_lib::commands::backup::core_backup_restore_confirm(ws.id.clone(), backup_filename.clone(), token, &app_state, &token_store).unwrap();
+    
+    // 6. Next connection should re-verify migrations implicitly because `core_backup_restore_confirm` invalidated it
+    {
+        let conn = ledgerline_lib::db::connection::open_connection(&ws.db_path, Some(&ws.id)).unwrap();
+        let count: i64 = conn.query_row("SELECT count(*) FROM mrr_log", [], |row| row.get(0)).unwrap();
+        assert_eq!(count, 1, "Restored schema should be intact and migrations re-verified if needed");
+    }
 }

@@ -5,17 +5,14 @@ use chrono::Utc;
 use super::manager::WorkspaceError;
 
 fn remove_duckdb_wal(path: &Path) -> Result<(), WorkspaceError> {
-    let candidates = [
-        path.with_extension("duckdb.wal"),
-        path.with_extension("duckdb-wal"),
-    ];
+    let mut wal_os = path.as_os_str().to_os_string();
+    wal_os.push(".wal");
+    let wal = PathBuf::from(wal_os);
 
-    for wal in candidates {
-        match fs::remove_file(&wal) {
-            Ok(()) => (),
-            Err(err) if err.kind() == ErrorKind::NotFound => (),
-            Err(err) => return Err(WorkspaceError::Io(err)),
-        }
+    match fs::remove_file(&wal) {
+        Ok(()) => (),
+        Err(err) if err.kind() == ErrorKind::NotFound => (),
+        Err(err) => return Err(WorkspaceError::Io(err)),
     }
 
     Ok(())
@@ -60,6 +57,20 @@ impl BackupManager {
         
         fs::copy(db_path, &backup_file)?;
         
+        let db_wal = {
+            let mut s = db_path.as_os_str().to_os_string();
+            s.push(".wal");
+            PathBuf::from(s)
+        };
+        if db_wal.exists() {
+            let backup_wal = {
+                let mut s = backup_file.as_os_str().to_os_string();
+                s.push(".wal");
+                PathBuf::from(s)
+            };
+            fs::copy(&db_wal, &backup_wal)?;
+        }
+        
         // Retention policy: Keep only the 5 most recent backups
         if let Ok(entries) = fs::read_dir(&backups_dir) {
             let mut files: Vec<PathBuf> = entries
@@ -78,6 +89,14 @@ impl BackupManager {
             // Delete anything beyond the 5th file
             for file_to_delete in files.iter().skip(5) {
                 let _ = fs::remove_file(file_to_delete);
+                
+                // Also clean up the sidecar .wal file if one exists
+                let mut wal_os = file_to_delete.as_os_str().to_os_string();
+                wal_os.push(".wal");
+                let wal = PathBuf::from(wal_os);
+                if wal.exists() {
+                    let _ = fs::remove_file(wal);
+                }
             }
         }
         
@@ -125,6 +144,20 @@ impl BackupManager {
         }
 
         fs::copy(backup_path, target_db_path)?;
+        
+        let backup_wal = {
+            let mut s = backup_path.as_os_str().to_os_string();
+            s.push(".wal");
+            PathBuf::from(s)
+        };
+        if backup_wal.exists() {
+            let target_wal = {
+                let mut s = target_db_path.as_os_str().to_os_string();
+                s.push(".wal");
+                PathBuf::from(s)
+            };
+            fs::copy(&backup_wal, &target_wal)?;
+        }
         Ok(())
     }
 }
@@ -136,7 +169,7 @@ mod tests {
     use std::path::PathBuf;
 
     fn get_test_dir() -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("ledgerline_backup_test_{}", Utc::now().timestamp_nanos()));
+        let dir = std::env::temp_dir().join(format!("ledgerline_backup_test_{}", Utc::now().timestamp_nanos_opt().unwrap_or(0)));
         let _ = fs::remove_dir_all(&dir);
         dir
     }
@@ -150,8 +183,11 @@ mod tests {
         let target_db = dir.join("target.duckdb");
         fs::write(&source_db, "db").unwrap();
         fs::write(&target_db, "old").unwrap();
-        fs::write(target_db.with_extension("duckdb.wal"), "wal").unwrap();
-        fs::write(target_db.with_extension("duckdb-wal"), "wal").unwrap();
+        fs::write({
+            let mut s = target_db.as_os_str().to_os_string();
+            s.push(".wal");
+            PathBuf::from(s)
+        }, "wal").unwrap();
 
         let manager = BackupManager::new(&dir);
         manager.restore(&source_db, &target_db).unwrap();
@@ -160,9 +196,56 @@ mod tests {
         let source_bytes = fs::read(&source_db).unwrap();
         let target_bytes = fs::read(&target_db).unwrap();
         assert_eq!(target_bytes, source_bytes, "Restored target DB bytes must match the source backup file");
-        assert!(!target_db.with_extension("duckdb.wal").exists());
-        assert!(!target_db.with_extension("duckdb-wal").exists());
+        assert!(!{
+            let mut s = target_db.as_os_str().to_os_string();
+            s.push(".wal");
+            PathBuf::from(s)
+        }.exists());
 
+        let _ = fs::remove_dir_all(&dir);
+    }
+    
+    #[test]
+    fn test_backup_retention_removes_wal_sidecars() {
+        let dir = get_test_dir();
+        fs::create_dir_all(&dir).unwrap();
+        let manager = BackupManager::new(&dir);
+        let ws_id = "test_retention";
+        let backups_dir = dir.join("backups").join(ws_id);
+        fs::create_dir_all(&backups_dir).unwrap();
+        
+        // Create 6 dummy backups and 6 dummy WALs (limit is 5)
+        for i in 0..6 {
+            let bak = backups_dir.join(format!("backup_{}.duckdb.bak", i));
+            let mut wal_os = bak.as_os_str().to_os_string();
+            wal_os.push(".wal");
+            let wal = PathBuf::from(wal_os);
+            
+            fs::write(&bak, "dummy").unwrap();
+            fs::write(&wal, "dummy wal").unwrap();
+            
+            // Artificial delay to ensure distinct modified timestamps
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        
+        // Use an empty dummy db to trigger a new backup, forcing retention sweep
+        let dummy_db = dir.join("dummy.duckdb");
+        fs::write(&dummy_db, "new").unwrap();
+        manager.backup(&dummy_db, ws_id).unwrap();
+        
+        // Should only be 5 backups + their 5 WALs left (10 files total). 
+        // The oldest backup_0 AND its WAL should be gone.
+        let entries: Vec<_> = fs::read_dir(&backups_dir).unwrap().map(|e| e.unwrap().path()).collect();
+        assert_eq!(entries.len(), 10, "Should only retain 5 backups and 5 wals");
+        
+        let oldest_bak = backups_dir.join("backup_0.duckdb.bak");
+        let mut oldest_wal_os = oldest_bak.as_os_str().to_os_string();
+        oldest_wal_os.push(".wal");
+        let oldest_wal = PathBuf::from(oldest_wal_os);
+        
+        assert!(!oldest_bak.exists(), "Oldest backup should be deleted");
+        assert!(!oldest_wal.exists(), "Oldest WAL sidecar should be deleted");
+        
         let _ = fs::remove_dir_all(&dir);
     }
 }

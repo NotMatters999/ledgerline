@@ -1,17 +1,16 @@
 use duckdb::Connection;
 use serde::Serialize;
 use crate::engines::mrr::calculate_mrr;
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize)]
 pub struct LtvMovement {
     pub month: String,
-    pub ltv: f64,
+    pub ltv: Option<f64>,
     pub arpa: f64,
     pub gross_margin: f64,
     pub churn_rate: f64,
 }
-
-use std::collections::HashMap;
 
 pub fn calculate_ltv(conn: &Connection) -> Result<Vec<LtvMovement>, duckdb::Error> {
     let mrr_data = calculate_mrr(conn)?;
@@ -39,11 +38,11 @@ pub fn calculate_ltv(conn: &Connection) -> Result<Vec<LtvMovement>, duckdb::Erro
 
     for m in mrr_data {
         let month_key = m.month.chars().take(7).collect::<String>(); // YYYY-MM
-        let gross_margin = margin_by_month.get(&month_key).cloned().unwrap_or(global_margin);
+        let gross_margin = margin_by_month.get(&month_key).copied().unwrap_or(global_margin);
 
         let mut arpa = 0.0;
         let mut churn_rate = 0.0;
-        let mut ltv = 0.0;
+        let mut ltv = None;
 
         if m.ending_customers > 0 {
             arpa = m.ending / m.ending_customers as f64;
@@ -54,7 +53,7 @@ pub fn calculate_ltv(conn: &Connection) -> Result<Vec<LtvMovement>, duckdb::Erro
         }
 
         if churn_rate > 0.0 {
-            ltv = (arpa * gross_margin) / churn_rate;
+            ltv = Some((arpa * gross_margin) / churn_rate);
         }
 
         ltv_data.push(LtvMovement {

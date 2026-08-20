@@ -28,6 +28,6 @@ export async function requestDeleteWorkspace(id: string): Promise<string> {
     return await invoke<string>('workspace_delete_request', { id });
 }
 
-export async function confirmDeleteWorkspace(token: string): Promise<void> {
-    return await invoke<void>('workspace_delete_confirm', { token });
+export async function confirmDeleteWorkspace(id: string, token: string): Promise<void> {
+    return await invoke<void>('workspace_delete_confirm', { id, token });
 }

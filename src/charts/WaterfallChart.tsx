@@ -70,11 +70,15 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({ data }) => {
                         color: '#fff',
                         formatter: (p: any) => {
                             if (p.dataIndex > 0 && p.dataIndex < payload.categories.length - 1) {
-                                // Add sign for intermediate movements if we had the original
-                                // The value here is positive, but we know color tells us direction
-                                return p.value > 0 ? (payload.colors[p.dataIndex] === '#F43F5E' ? `-${p.value}` : `+${p.value}`) : '';
+                                // Intermediate movement bar: show signed value, or '$0' for zero bars
+                                // so the category slot is visually occupied in the bridge structure.
+                                if (p.value === 0) return '$0';
+                                return payload.colors[p.dataIndex] === '#F43F5E'
+                                    ? `-$${p.value.toLocaleString()}`
+                                    : `+$${p.value.toLocaleString()}`;
                             }
-                            return p.value;
+                            // Beginning / Ending total bars
+                            return `$${typeof p.value === 'number' ? p.value.toLocaleString() : p.value}`;
                         }
                     },
                     data: payload.value.map((val, idx) => {

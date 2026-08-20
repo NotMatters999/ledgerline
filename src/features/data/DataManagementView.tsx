@@ -1,19 +1,26 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     listMrrLog,
     countMrrLog,
     addMrrLog,
-    deleteMrrLog,
+    requestDeleteMrrLog,
+    confirmDeleteMrrLog,
     MrrLogRow,
     MrrLogAddPayload,
 } from '../../lib/ipc/data';
 import { useFinancialsStore } from '../../store/financials';
+import { useWorkspaceStore } from '../../store/workspace';
 import { ImportButton } from '../import/ImportButton';
 import { ExportButton } from '../export/ExportButton';
+import { InlineConfirm } from '../../components/InlineConfirm';
+import { ErrorBanner } from '../../components/ErrorBanner';
+import { CurrencyWarningBanner } from '../../components/CurrencyWarningBanner';
+import { mapBackendError } from '../../utils/errors';
+import { validateMrrAmount } from '../../utils/math';
 
 const PAGE_SIZE = 50;
 
-export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ activeWorkspaceId }) => {
+export const DataManagementView: React.FC = () => {
     const [rows, setRows] = useState<MrrLogRow[]>([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(0);
@@ -23,56 +30,69 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Undo last deletion
-    const [lastDeleted, setLastDeleted] = useState<MrrLogRow | null>(null);
-    const [undoVisible, setUndoVisible] = useState(false);
-    const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Delete row state
+    const [deletingRow, setDeletingRow] = useState<{ rowid: number; token: string } | null>(null);
+
 
     // Add row form
     const [showAddForm, setShowAddForm] = useState(false);
-    const [formData, setFormData] = useState<MrrLogAddPayload>({
+    const [formData, setFormData] = useState({
         customer_id: '',
         period: new Date().toISOString().slice(0, 10),
-        mrr_amount: 0,
+        mrr_amount: '0',
         currency: 'USD',
+        category: 'Standard',
     });
     const [submitting, setSubmitting] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
 
     const fetchData = useFinancialsStore(s => s.fetchData);
+    const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
+    const workspaceLoading  = useWorkspaceStore(s => s.isLoading);
     const hasWorkspace = Boolean(activeWorkspaceId);
+    // True while workspace.load() is still in-flight (activeId not yet known)
+    const workspaceReady = !workspaceLoading && hasWorkspace;
 
     const loadRows = useCallback(async (p: number, q: string, sb: string, sd: string) => {
-        if (!hasWorkspace) {
-            setRows([]);
-            setTotal(0);
-            setIsLoading(false);
-            return;
-        }
-
         setIsLoading(true);
         setError(null);
         try {
-            const [data, count] = await Promise.all([
-                listMrrLog(activeWorkspaceId, q, sb, sd, p * PAGE_SIZE, PAGE_SIZE),
-                countMrrLog(activeWorkspaceId, q),
-            ]);
+            // Sequential — not Promise.all — because each command opens its own
+            // DuckDB connection. DuckDB holds an exclusive file lock per Connection,
+            // so two concurrent opens on the same .duckdb file fail with a lock error.
+            const data  = await listMrrLog(q, sb, sd, p * PAGE_SIZE, PAGE_SIZE);
+            const count = await countMrrLog(q);
             setRows(data);
             setTotal(count);
         } catch (e: unknown) {
-            setError((e as Error)?.message ?? String(e));
+            console.error('[DataManagementView] loadRows error (raw):', e);
+            const msg = typeof e === 'string' ? e
+                : (e instanceof Error ? e.message : JSON.stringify(e));
+            setError(msg);
         } finally {
             setIsLoading(false);
         }
-    }, [activeWorkspaceId, hasWorkspace]);
+    }, [activeWorkspaceId]); // re-create only when workspace actually changes
+
+
 
     const refreshRows = useCallback(async (nextPage = page) => {
         await loadRows(nextPage, search, sortBy, sortDir);
     }, [loadRows, page, search, sortBy, sortDir]);
 
     useEffect(() => {
+        // Gate on both: workspace must be known (not loading) AND have an ID.
+        // During the brief window while workspace.load() is in-flight,
+        // activeId is '' and workspaceLoading is true — don't fire any IPC.
+        if (!hasWorkspace) {
+            setRows([]);
+            setTotal(0);
+            setError(null);
+            return;
+        }
         loadRows(page, search, sortBy, sortDir);
-    }, [page, search, sortBy, sortDir, loadRows]);
+    }, [page, search, sortBy, sortDir, loadRows, hasWorkspace, workspaceReady]);
+
 
     const handleSort = (col: string) => {
         if (sortBy === col) {
@@ -84,43 +104,31 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
         setPage(0);
     };
 
-    const handleDelete = async (row: MrrLogRow) => {
+    const handleRequestDelete = async (row: MrrLogRow) => {
         if (!activeWorkspaceId) return;
-
         try {
-            const deleted = await deleteMrrLog(activeWorkspaceId, row.rowid);
-            setLastDeleted(deleted);
-            setUndoVisible(true);
-            if (undoTimer.current) clearTimeout(undoTimer.current);
-            undoTimer.current = setTimeout(() => {
-                setUndoVisible(false);
-                setLastDeleted(null);
-            }, 5000);
-            await refreshRows(page);
-            await fetchData(activeWorkspaceId);
+            const token = await requestDeleteMrrLog(row.rowid);
+            setDeletingRow({ rowid: row.rowid, token });
         } catch (e: any) {
-            setError(e?.toString() ?? 'Delete failed');
+            setError(e instanceof Error ? e.message : (typeof e === 'string' ? e : (JSON.stringify(e) || String(e))));
         }
     };
 
-    const handleUndo = async () => {
-        if (!lastDeleted || !activeWorkspaceId) return;
+    const handleConfirmDelete = async () => {
+        if (!activeWorkspaceId || !deletingRow) return;
+
         try {
-            await addMrrLog(activeWorkspaceId, {
-                customer_id: lastDeleted.customer_id,
-                period: lastDeleted.period,
-                mrr_amount: lastDeleted.mrr_amount,
-                currency: lastDeleted.currency,
-            });
-            setUndoVisible(false);
-            setLastDeleted(null);
-            if (undoTimer.current) clearTimeout(undoTimer.current);
+            await confirmDeleteMrrLog(deletingRow.rowid, deletingRow.token);
+            setDeletingRow(null);
             await refreshRows(page);
-            await fetchData(activeWorkspaceId);
+            await fetchData();
         } catch (e: any) {
-            setError(e?.toString() ?? 'Undo failed');
+            setError(e instanceof Error ? e.message : (typeof e === 'string' ? e : (JSON.stringify(e) || String(e))));
+            setDeletingRow(null);
         }
     };
+
+    // Undo logic removed for 2-step strict delete
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -129,14 +137,23 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
         setSubmitting(true);
         setFormError(null);
         try {
-            await addMrrLog(activeWorkspaceId, formData);
+            const parsedAmount = validateMrrAmount(formData.mrr_amount);
+            const payload: MrrLogAddPayload = {
+                ...formData,
+                mrr_amount: parsedAmount,
+            };
+            await addMrrLog(payload);
             setShowAddForm(false);
-            setFormData({ customer_id: '', period: new Date().toISOString().slice(0, 10), mrr_amount: 0, currency: 'USD' });
+            setFormData({ customer_id: '', period: new Date().toISOString().slice(0, 10), mrr_amount: '0', currency: 'USD', category: 'Standard' });
             setPage(0);
             await refreshRows(0);
-            await fetchData(activeWorkspaceId);
+            await fetchData();
         } catch (e: any) {
-            setFormError(e?.toString() ?? 'Add failed');
+            // Log raw error before mapping to friendly message
+            console.error('[DataManagementView] handleAdd error (raw):', e);
+            const msg = typeof e === 'string' ? e
+                : (e instanceof Error ? e.message : JSON.stringify(e));
+            setFormError(msg);
         } finally {
             setSubmitting(false);
         }
@@ -144,13 +161,6 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
 
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-    useEffect(() => {
-        return () => {
-            if (undoTimer.current) {
-                clearTimeout(undoTimer.current);
-            }
-        };
-    }, []);
 
     const SortArrow = ({ col }: { col: string }) => (
         <span style={{ marginLeft: 4, opacity: sortBy === col ? 1 : 0.3, fontSize: '0.75rem' }}>
@@ -164,6 +174,9 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                 <h2 className="page-title">Data Management</h2>
                 <p className="page-subtitle">Search, edit and manage your MRR records.</p>
             </header>
+
+            {/* Currency warning — shown when mrr_log contains currencies without configured rates */}
+            <CurrencyWarningBanner />
 
             {/* Toolbar */}
             <div className="flex-between" style={{ gap: '1rem', flexWrap: 'wrap' }}>
@@ -179,8 +192,8 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                     }}
                 />
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                    <ImportButton activeWorkspaceId={activeWorkspaceId} />
-                    <ExportButton activeWorkspaceId={activeWorkspaceId} />
+                    <ImportButton onSuccess={() => { setPage(0); refreshRows(0); }} />
+                    <ExportButton />
                     <button
                         className="nav-item active"
                         onClick={() => setShowAddForm(v => !v)}
@@ -196,9 +209,10 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                 <div className="glass-panel p-6" style={{ borderColor: 'var(--accent-primary)' }}>
                     <h3 className="card-title" style={{ marginBottom: '1rem' }}>Add MRR Record</h3>
                     {formError && (
-                        <div style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--status-danger)', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
-                            {formError}
-                        </div>
+                        <ErrorBanner
+                            error={mapBackendError(formError) ?? formError}
+                            onClear={() => setFormError(null)}
+                        />
                     )}
                     <form onSubmit={handleAdd} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px,1fr))', gap: '0.75rem', alignItems: 'end' }}>
                         {[
@@ -206,6 +220,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                             { label: 'Period (YYYY-MM-DD)', key: 'period', type: 'date', placeholder: '' },
                             { label: 'MRR Amount', key: 'mrr_amount', type: 'number', placeholder: '0.00' },
                             { label: 'Currency', key: 'currency', type: 'text', placeholder: 'USD' },
+                            { label: 'Category', key: 'category', type: 'text', placeholder: 'Standard' },
                         ].map(({ label, key, type, placeholder }) => (
                             <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
@@ -214,10 +229,11 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                                     placeholder={placeholder}
                                     step={type === 'number' ? '0.01' : undefined}
                                     min={type === 'number' ? '0' : undefined}
+                                    max={type === 'date' ? new Date().toISOString().slice(0, 10) : undefined}
                                     value={(formData as any)[key]}
                                     onChange={e => setFormData(prev => ({
                                         ...prev,
-                                        [key]: type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value,
+                                        [key]: e.target.value,
                                     }))}
                                     required
                                     style={{
@@ -239,27 +255,14 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                 </div>
             )}
 
-            {/* Undo toast */}
-            {undoVisible && lastDeleted && (
-                <div style={{
-                    position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)',
-                    background: 'rgba(16,185,129,0.15)', backdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(16,185,129,0.4)', borderRadius: '0.75rem',
-                    padding: '0.875rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem',
-                    color: 'var(--text-primary)', zIndex: 1000, boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-                }}>
-                    <span style={{ fontSize: '0.875rem' }}>Deleted <strong>{lastDeleted.customer_id}</strong> ({lastDeleted.period})</span>
-                    <button onClick={handleUndo} className="nav-item active" style={{ padding: '0.375rem 1rem', borderRadius: '0.375rem', fontSize: '0.8rem' }}>
-                        Undo
-                    </button>
-                </div>
-            )}
+            {/* Undo toast removed for strict 2-step delete */}
 
-            {/* Error */}
+            {/* Error — show whenever error is set, always with a human-readable message */}
             {error && (
-                <div style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--status-danger)', padding: '0.75rem 1rem', borderRadius: '0.5rem', fontSize: '0.875rem' }}>
-                    {error}
-                </div>
+                <ErrorBanner
+                    error={mapBackendError(error) ?? error}
+                    onClear={() => setError(null)}
+                />
             )}
 
             {/* Table */}
@@ -272,6 +275,7 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                                 { label: 'Period', col: 'period' },
                                 { label: 'MRR Amount', col: 'mrr_amount' },
                                 { label: 'Currency', col: 'currency' },
+                                { label: 'Category', col: 'category' },
                             ].map(({ label, col }) => (
                                 <th
                                     key={col}
@@ -286,9 +290,15 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                     </thead>
                     <tbody>
                         {isLoading ? (
-                            <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading…</td></tr>
+                            <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading…</td></tr>
                         ) : rows.length === 0 ? (
-                            <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No records found{search ? ' matching your search' : '. Import CSV or Excel data to get started.'}</td></tr>
+                            <tr>
+                                <td colSpan={6} style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        No records found{search ? ' matching your search' : '. Import CSV or Excel data to get started.'}
+                                    </div>
+                                </td>
+                            </tr>
                         ) : rows.map(row => (
                             <tr
                                 key={row.rowid}
@@ -302,20 +312,36 @@ export const DataManagementView: React.FC<{ activeWorkspaceId: string }> = ({ ac
                                     {new Intl.NumberFormat('en-US', { style: 'currency', currency: row.currency, maximumFractionDigits: 2 }).format(row.mrr_amount)}
                                 </td>
                                 <td style={{ padding: '0.625rem 1rem', color: 'var(--text-muted)' }}>{row.currency}</td>
+                                <td style={{ padding: '0.625rem 1rem', color: 'var(--text-muted)' }}>{row.category || '—'}</td>
                                 <td style={{ padding: '0.625rem 1rem', textAlign: 'right' }}>
-                                    <button
-                                        onClick={() => handleDelete(row)}
-                                        title="Delete row"
-                                        style={{
-                                            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
-                                            color: 'var(--status-danger)', borderRadius: '0.375rem', padding: '0.25rem 0.625rem',
-                                            cursor: 'pointer', fontSize: '0.75rem', transition: 'background 0.15s'
-                                        }}
-                                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.2)')}
-                                        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.1)')}
-                                    >
-                                        Delete
-                                    </button>
+                                    {deletingRow?.rowid === row.rowid ? (
+                                        <InlineConfirm
+                                            message="Delete?"
+                                            confirmText="Confirm"
+                                            cancelText="Cancel"
+                                            onConfirm={handleConfirmDelete}
+                                            onCancel={() => {
+                                                // Cancel discards the state. The requested token is not 
+                                                // explicitly released; it will simply expire via its 5-minute TTL.
+                                                // This is an intentional security design (fail-closed).
+                                                setDeletingRow(null);
+                                            }}
+                                        />
+                                    ) : (
+                                        <button
+                                            onClick={() => handleRequestDelete(row)}
+                                            title="Delete row"
+                                            style={{
+                                                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+                                                color: 'var(--status-danger)', borderRadius: '0.375rem', padding: '0.25rem 0.625rem',
+                                                cursor: 'pointer', fontSize: '0.75rem', transition: 'background 0.15s'
+                                            }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.2)')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.1)')}
+                                        >
+                                            Delete
+                                        </button>
+                                    )}
                                 </td>
                             </tr>
                         ))}

@@ -1,69 +1,64 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { importPreview, importCommit, PreviewResult } from '../../lib/ipc/import';
 import { useFinancialsStore } from '../../store/financials';
 import { useCohortStore } from '../../store/cohort';
-
-interface Props {
-    activeWorkspaceId: string;
-}
+import { useWorkspaceStore } from '../../store/workspace';
+import { open } from '@tauri-apps/plugin-dialog';
 
 type Phase =
     | { tag: 'idle' }
     | { tag: 'loading'; message: string }
     | { tag: 'preview'; result: PreviewResult; filePath: string }
     | { tag: 'committing' }
-    | { tag: 'success'; rowCount: number }
+    | { tag: 'success'; inserted: number; updated: number }
     | { tag: 'error'; message: string };
 
-export const ImportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
-    const inputRef = useRef<HTMLInputElement>(null);
+interface ImportButtonProps {
+    /** Called after a successful import commit so the parent can refresh its data table. */
+    onSuccess?: () => void;
+}
+
+export const ImportButton: React.FC<ImportButtonProps> = ({ onSuccess }) => {
     const [phase, setPhase] = useState<Phase>({ tag: 'idle' });
     const fetchFinancials = useFinancialsStore(s => s.fetchData);
     const fetchCohort = useCohortStore(s => s.fetchData);
 
-    const openPicker = () => {
+    const activeWorkspaceId = useWorkspaceStore(s => s.activeId);
+
+    const openPicker = async () => {
         if (!activeWorkspaceId) return;
-        inputRef.current?.click();
-    };
-
-    const onFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        // Reset file input so the same file can be re-selected
-        e.target.value = '';
-
-        // Tauri exposes the real OS path on the File object
-        const filePath: string = (file as unknown as { path: string }).path;
-        if (!filePath) {
-            setPhase({ tag: 'error', message: 'Could not read file path. Try dragging the file or use the Tauri file dialog.' });
-            return;
-        }
-
-        setPhase({ tag: 'loading', message: 'Analysing file…' });
         try {
-            const result = await importPreview(activeWorkspaceId, filePath);
+            const selected = await open({
+                multiple: false,
+                filters: [{ name: 'Data Files', extensions: ['csv', 'xlsx', 'xls'] }]
+            });
+            if (selected === null) return;
+            
+            const filePath = selected as string;
+            setPhase({ tag: 'loading', message: 'Analyzing file…' });
+            const result = await importPreview(filePath);
             setPhase({ tag: 'preview', result, filePath });
-        } catch (err: unknown) {
-            setPhase({ tag: 'error', message: String(err) });
+        } catch (err: any) {
+            setPhase({ tag: 'error', message: err instanceof Error ? err.message : (typeof err === 'string' ? err : (JSON.stringify(err) || String(err))) });
         }
     };
 
     const onCommit = async () => {
         if (phase.tag !== 'preview') return;
-        const { filePath, result } = phase;
+        const { filePath } = phase;
         setPhase({ tag: 'committing' });
         try {
-            await importCommit(activeWorkspaceId, filePath);
-            const rowCount = result.sample_normalized.length;
-            setPhase({ tag: 'success', rowCount });
+            const result = await importCommit(filePath);
+            setPhase({ tag: 'success', inserted: result.inserted, updated: result.updated });
             // Refresh all data stores
             await Promise.all([
-                fetchFinancials(activeWorkspaceId),
-                fetchCohort(activeWorkspaceId),
+                fetchFinancials(),
+                fetchCohort(),
             ]);
-        } catch (err: unknown) {
-            setPhase({ tag: 'error', message: String(err) });
+            // Notify parent (e.g. DataManagementView) so it can reload its rows
+            onSuccess?.();
+        } catch (err: any) {
+            setPhase({ tag: 'error', message: err instanceof Error ? err.message : (typeof err === 'string' ? err : (JSON.stringify(err) || String(err))) });
         }
     };
 
@@ -73,15 +68,6 @@ export const ImportButton: React.FC<Props> = ({ activeWorkspaceId }) => {
 
     return (
         <>
-            {/* Hidden file input */}
-            <input
-                ref={inputRef}
-                type="file"
-                accept=".csv,.xlsx,.xls"
-                style={{ display: 'none' }}
-                onChange={onFileSelected}
-            />
-
             {/* Nav button */}
             <button
                 id="import-btn"
@@ -257,8 +243,17 @@ const ModalBody: React.FC<{
                         Import successful
                     </p>
                     <p className="text-muted" style={{ fontSize: '0.875rem' }}>
-                        {phase.rowCount} rows imported. All charts have been refreshed.
+                        <strong style={{ color: 'var(--accent-primary)' }}>{phase.inserted.toLocaleString()}</strong> new rows added
+                        {phase.updated > 0 && (
+                            <>, <strong style={{ color: 'rgba(245,158,11,0.9)' }}>{phase.updated.toLocaleString()}</strong> existing records updated</>
+                        )}
+                        . All charts have been refreshed.
                     </p>
+                    {phase.updated > 0 && (
+                        <p style={{ fontSize: '0.75rem', color: 'rgba(245,158,11,0.75)', marginTop: '0.5rem' }}>
+                            ⚠ Updated rows replaced existing data for the same customer + period.
+                        </p>
+                    )}
                 </div>
                 <button id="import-success-close" onClick={onClose} style={primaryBtnStyle('var(--accent-primary)', '#000')}>
                     Done
@@ -319,7 +314,7 @@ const ModalBody: React.FC<{
                     </svg>
                     <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0 }}>
                         Previewing <strong style={{ color: 'var(--text-primary)' }}>{rows.length}</strong> sample rows.
-                        The full file will be imported on confirm.
+                        Full file contains <strong style={{ color: 'var(--text-primary)' }}>{result.total_rows.toLocaleString()}</strong> rows — all will be imported on confirm.
                     </p>
                 </div>
 
@@ -372,7 +367,7 @@ const ModalBody: React.FC<{
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
-                        Import {rows.length} rows
+                        Import {result.total_rows.toLocaleString()} rows
                     </button>
                 </div>
             </div>
