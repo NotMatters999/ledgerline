@@ -92,7 +92,14 @@ pub struct ExchangeRate {
     pub rate_to_base: f64,
 }
 
+/// USD is the hardcoded base currency (rate = 1.0).  It is never stored in
+/// `exchange_rates` — the engine already defaults to 1.0 via COALESCE when no
+/// row is present.  We strip it from both reads and writes so the UI can never
+/// override it.
+const BASE_CURRENCY: &str = "USD";
+
 /// Return all currently configured exchange rates for this workspace.
+/// USD is excluded — it is always 1.0 and is not user-configurable.
 #[tauri::command]
 pub fn exchange_rates_get(workspace_id: String, state: State<'_, AppState>) -> Result<Vec<ExchangeRate>, String> {
     let conn = get_workspace_conn(&workspace_id, &state)?;
@@ -102,8 +109,13 @@ pub fn exchange_rates_get(workspace_id: String, state: State<'_, AppState>) -> R
     let mut rows = stmt.query([]).map_err(|e| e.to_string())?;
     let mut result = Vec::new();
     while let Some(row) = rows.next().map_err(|e| e.to_string())? {
+        let currency: String = row.get(0).map_err(|e| e.to_string())?;
+        // Never expose USD as a configurable rate
+        if currency.to_uppercase() == BASE_CURRENCY {
+            continue;
+        }
         result.push(ExchangeRate {
-            currency: row.get(0).map_err(|e| e.to_string())?,
+            currency,
             rate_to_base: row.get(1).map_err(|e| e.to_string())?,
         });
     }
@@ -111,6 +123,7 @@ pub fn exchange_rates_get(workspace_id: String, state: State<'_, AppState>) -> R
 }
 
 /// Batch-upsert exchange rates.  Rates with value <= 0 are rejected.
+/// USD entries are silently ignored — it is always 1.0.
 /// Passing an empty vec is a no-op (does not clear existing rates).
 #[tauri::command]
 pub fn exchange_rates_set(
@@ -138,6 +151,10 @@ pub fn exchange_rates_set(
                  updated_at   = now()"
         ).map_err(|e| e.to_string())?;
         for r in &rates {
+            // USD is the fixed base — skip silently
+            if r.currency.trim().to_uppercase() == BASE_CURRENCY {
+                continue;
+            }
             stmt.execute(duckdb::params![r.currency.trim(), r.rate_to_base])
                 .map_err(|e| e.to_string())?;
         }

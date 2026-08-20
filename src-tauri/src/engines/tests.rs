@@ -15,7 +15,8 @@ fn setup_db() -> Connection {
         "CREATE TABLE mrr_log (customer_id VARCHAR, period DATE, mrr_amount DOUBLE, currency VARCHAR);
          CREATE TABLE marketing_spend (period DATE, amount DOUBLE, channel VARCHAR);
          CREATE TABLE monthly_assumptions (month VARCHAR, marketing_spend DOUBLE, gross_margin DOUBLE);
-         CREATE TABLE settings (key VARCHAR, value VARCHAR);"
+         CREATE TABLE settings (key VARCHAR, value VARCHAR);
+         CREATE TABLE exchange_rates (currency VARCHAR PRIMARY KEY, rate_to_base DOUBLE NOT NULL, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
     ).unwrap();
 
     // Insert settings

@@ -316,19 +316,26 @@ export const SettingsView: React.FC = () => {
                         <div>
                             <h3 className="card-title" style={{ color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Currency Rates</h3>
                             <p className="text-muted" style={{ fontSize: '0.875rem' }}>
-                                Set the exchange rate for each currency relative to your base/reporting currency.
-                                The base currency itself should have rate&nbsp;<code>1.0</code>.
+                                Set the exchange rate for each currency relative to USD (the base currency).
                                 Currencies without a rate are treated as 1:1.
                             </p>
                         </div>
 
-                        {currencies.length === 0 ? (
+                        {/* USD fixed base badge */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.875rem', borderRadius: '0.5rem', background: 'rgba(5,150,105,0.08)', border: '1px solid rgba(5,150,105,0.25)', alignSelf: 'flex-start' }}>
+                            <span style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)', fontFamily: 'monospace' }}>USD</span>
+                            <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>=</span>
+                            <span style={{ fontWeight: 600, fontSize: '0.875rem', color: '#10B981', fontFamily: 'monospace' }}>1.0</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'rgba(5,150,105,0.15)', borderRadius: '999px', padding: '0.1rem 0.5rem' }}>base currency</span>
+                        </div>
+
+                        {currencies.filter(c => c.toUpperCase() !== 'USD').length === 0 ? (
                             <p className="text-muted" style={{ fontStyle: 'italic', fontSize: '0.875rem' }}>
-                                No currencies detected yet. Import data first to populate this section.
+                                No other currencies detected yet. Import data first to populate this section.
                             </p>
                         ) : (
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
-                                {currencies.map(currency => (
+                                {currencies.filter(c => c.toUpperCase() !== 'USD').map(currency => (
                                     <div key={currency} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                         <label style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>
                                             {currency}
@@ -355,7 +362,7 @@ export const SettingsView: React.FC = () => {
                         )}
                         {ratesSaved && <p style={{ color: 'var(--status-success)', fontSize: '0.875rem' }}>✓ Exchange rates saved</p>}
 
-                        {currencies.length > 0 && (
+                        {currencies.filter(c => c.toUpperCase() !== 'USD').length > 0 && (
                             <button onClick={handleSaveRates} className="btn-primary" style={{ alignSelf: 'flex-start' }}>
                                 Save Currency Rates
                             </button>

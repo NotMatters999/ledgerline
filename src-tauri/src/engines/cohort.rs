@@ -25,12 +25,13 @@ pub struct CohortData {
 
 pub fn calculate_cohorts(conn: &Connection) -> Result<CohortData, duckdb::Error> {
     let mut stmt = conn.prepare(
-        "SELECT customer_id, 
-                date_trunc('month', period)::DATE as month_start, 
-                SUM(mrr_amount) as mrr 
-         FROM mrr_log 
-         GROUP BY customer_id, month_start 
-         ORDER BY customer_id, month_start"
+        "SELECT m.customer_id,
+                date_trunc('month', m.period)::DATE as month_start,
+                SUM(m.mrr_amount * COALESCE(er.rate_to_base, 1.0)) as mrr
+         FROM mrr_log m
+         LEFT JOIN exchange_rates er ON er.currency = m.currency
+         GROUP BY m.customer_id, month_start
+         ORDER BY m.customer_id, month_start"
     )?;
 
     let mut rows = stmt.query([])?;
