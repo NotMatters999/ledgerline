@@ -132,10 +132,10 @@ pub fn exchange_rates_set(
     {
         let mut stmt = tx.prepare(
             "INSERT INTO exchange_rates (currency, rate_to_base, updated_at)
-             VALUES (?, ?, CURRENT_TIMESTAMP)
+             VALUES (?, ?, now())
              ON CONFLICT (currency) DO UPDATE SET
                  rate_to_base = excluded.rate_to_base,
-                 updated_at   = CURRENT_TIMESTAMP"
+                 updated_at   = now()"
         ).map_err(|e| e.to_string())?;
         for r in &rates {
             stmt.execute(duckdb::params![r.currency.trim(), r.rate_to_base])
